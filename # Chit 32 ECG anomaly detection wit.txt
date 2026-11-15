@@ -1,0 +1,1572 @@
+# Chit 32: ECG anomaly detection with an autoencoder
+
+32. Develop an Autoencoder-based anomaly detection model to identify abnormal ECG signal patterns using an ECG dataset. Perform the following steps: 
+a. Import Libraries: Import the required Python libraries such as NumPy, Pandas, Matplotlib and TensorFlow/Keras. 
+b. Dataset Access: Load the ECG dataset, separate normal and abnormal ECG records, and perform necessary preprocessing and normalization. 
+c. Encoder Implementation: Design an encoder network using Dense layers to convert the input ECG signals into a compressed latent 
+representation. 
+d. Decoder Implementation: Design a decoder network to reconstruct the original ECG signals from the compressed latent representation. 
+e. Model Compilation: Compile the Autoencoder using the Adam optimizer, Mean Squared Error (MSE) loss function and suitable evaluation metrics. 
+f. Model Training: Train the Autoencoder primarily using normal ECG signals so that it learns to reconstruct normal patterns. 
+g. Anomaly Detection: Calculate reconstruction errors for test ECG signals and identify abnormal signals using a suitable threshold. 
+h. Output: Display original and reconstructed ECG signals, reconstruction errors and identify normal and abnormal ECG patterns. 
+
+
+
+# Step 1: Load the ECG data
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+
+data = pd.read_csv("ecg.csv", header=None)
+X = data.iloc[:, :-1].to_numpy(dtype="float32")
+labels = data.iloc[:, -1].to_numpy()
+normal_label = pd.Series(labels).value_counts().idxmax()
+print("Most common class (assumed normal):", normal_label)
+
+normal = X[labels == normal_label]
+abnormal = X[labels != normal_label]
+X_train, X_val = train_test_split(normal, test_size=0.2, random_state=42)
+
+
+# Step 2: Scale the ECG features
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train)
+X_val = scaler.transform(X_val)
+X_test = np.vstack([X_val, scaler.transform(abnormal)])
+y_test = np.concatenate([np.zeros(len(X_val), dtype=int), np.ones(len(abnormal), dtype=int)])
+
+
+# Step 3: Build and train the autoencoder
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(32, activation="relu"),
+    Dense(16, activation="relu"),
+    Dense(32, activation="relu"),
+    Dense(X_train.shape[1], activation="linear")
+])
+model.compile(optimizer="adam", loss="mse")
+model.summary()
+history = model.fit(X_train, X_train, epochs=10, batch_size=128, validation_split=0.1, verbose=0)
+
+
+# Step 4: Detect abnormal records
+val_reconstruction = model.predict(X_val, verbose=0)
+val_errors = np.mean(np.square(X_val - val_reconstruction), axis=1)
+threshold = np.percentile(val_errors, 95)
+
+test_reconstruction = model.predict(X_test, verbose=0)
+test_errors = np.mean(np.square(X_test - test_reconstruction), axis=1)
+y_pred = (test_errors > threshold).astype(int)
+print("Reconstruction-error threshold:", threshold)
+print("Actual abnormal records in test:", int(y_test.sum()))
+print("Detected abnormal records:", int(y_pred.sum()))
+
+
+# Step 5: Plot sample signals and errors
+normal_i = 0
+abnormal_indices = np.where(y_test == 1)[0]
+abnormal_i = int(abnormal_indices[0]) if len(abnormal_indices) else normal_i
+
+plt.figure(figsize=(12, 4))
+plt.plot(X_test[normal_i], label="Original normal")
+plt.plot(test_reconstruction[normal_i], label="Reconstructed")
+plt.title("Normal ECG reconstruction")
+plt.legend()
+plt.show()
+
+if len(abnormal_indices):
+    plt.figure(figsize=(12, 4))
+    plt.plot(X_test[abnormal_i], label="Original abnormal")
+    plt.plot(test_reconstruction[abnormal_i], label="Reconstructed")
+    plt.title("Abnormal ECG reconstruction")
+    plt.legend()
+    plt.show()
+
+plt.figure(figsize=(10, 4))
+plt.hist(test_errors, bins=40)
+plt.axvline(threshold, color="red", linestyle="--", label="Threshold")
+plt.xlabel("Reconstruction error")
+plt.ylabel("Number of records")
+plt.legend()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 32: ECG Anomaly Detection with an Autoencoder
+
+## Aim
+
+Train an autoencoder mainly on normal ECG records so it learns to reconstruct normal patterns. Then use reconstruction error to flag records that differ from those patterns.
+
+```text
+ECG record → Encoder → compressed representation → Decoder → reconstructed record
+                                      ↓
+                          compare original and reconstructed
+                                      ↓
+                           large error → flag as anomaly
+```
+
+## Step 1: Load the ECG data
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+- `numpy` and `pandas` handle arrays and tabular data.
+- `matplotlib.pyplot` plots the ECG signals and error histogram.
+- `train_test_split` separates normal records into training and validation sets.
+- `MinMaxScaler` scales feature values to a consistent range.
+- `Sequential`, `Input`, and `Dense` build the autoencoder.
+
+```python
+data = pd.read_csv("ecg.csv", header=None)
+X = data.iloc[:, :-1].to_numpy(dtype="float32")
+labels = data.iloc[:, -1].to_numpy()
+```
+
+- `pd.read_csv(...)` reads the CSV file.
+- `header=None` tells Pandas the file has no header row.
+- `data.iloc[:, :-1]` selects every row and every column except the last.
+- `X` contains the ECG features or samples.
+- `data.iloc[:, -1]` selects the final column, assumed to contain the class label.
+- `labels` stores the record labels.
+
+```python
+normal_label = pd.Series(labels).value_counts().idxmax()
+print("Most common class (assumed normal):", normal_label)
+```
+
+- `pd.Series(labels)` makes the labels into a Pandas Series.
+- `.value_counts()` counts how often each class appears.
+- `.idxmax()` returns the label with the largest count.
+- The code assumes that the most common class is normal.
+
+Your output says:
+
+```text
+Most common class (assumed normal): 1.0
+```
+
+So this code treats label `1.0` as the normal class. That is an assumption based on frequency; it is only valid if the dataset’s label definitions confirm it.
+
+```python
+normal = X[labels == normal_label]
+abnormal = X[labels != normal_label]
+X_train, X_val = train_test_split(normal, test_size=0.2, random_state=42)
+```
+
+- `labels == normal_label` creates a True/False selection for records labelled normal.
+- `normal` contains the assumed normal records.
+- `labels != normal_label` selects every other label.
+- `abnormal` contains the records treated as abnormal.
+- `train_test_split(...)` separates normal records into training and validation sets.
+- `test_size=0.2` puts 20% of normal records in `X_val`.
+- `random_state=42` makes this split repeatable.
+
+## Step 2: Scale the ECG features
+
+```python
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train)
+X_val = scaler.transform(X_val)
+```
+
+- `MinMaxScaler()` creates a scaler.
+- `fit_transform(X_train)` learns the minimum and maximum from training records, then scales them.
+- `transform(X_val)` scales validation records using the training-set minimum and maximum.
+
+```python
+X_test = np.vstack([X_val, scaler.transform(abnormal)])
+y_test = np.concatenate([
+    np.zeros(len(X_val), dtype=int),
+    np.ones(len(abnormal), dtype=int)
+])
+```
+
+- `scaler.transform(abnormal)` scales abnormal records using the same scaler.
+- `np.vstack(...)` stacks the normal validation records above the abnormal records to form the test input.
+- `np.zeros(...)` assigns `0` to each normal record.
+- `np.ones(...)` assigns `1` to each abnormal record.
+- `np.concatenate(...)` joins those labels into `y_test`.
+
+**Important limitation:** `X_val` is used both to choose the anomaly threshold in Step 4 and as the normal portion of `X_test`. That means those normal records are not an independent test set. A cleaner evaluation would keep a separate normal test set that was not used to set the threshold.
+
+## Step 3: Build and train the autoencoder
+
+```python
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(32, activation="relu"),
+    Dense(16, activation="relu"),
+    Dense(32, activation="relu"),
+    Dense(X_train.shape[1], activation="linear")
+])
+```
+
+- `Input(shape=(X_train.shape[1],))` sets the input length to the number of values in each ECG record. The summary shows it is **140**.
+- `Dense(32, ...)` compresses the 140 input values to 32 values.
+- `Dense(16, ...)` compresses them further to a 16-value **latent representation**.
+- These first two Dense layers form the encoder.
+- `Dense(32, ...)` begins expanding the compressed representation again.
+- `Dense(X_train.shape[1], ...)` outputs 140 values, matching the original record length. These last two layers form the decoder.
+- `activation="relu"` applies the ReLU function, changing negative values to zero and keeping positive ones.
+- `activation="linear"` leaves the output unconstrained, which is useful when reconstructing scaled values.
+
+```python
+model.compile(optimizer="adam", loss="mse")
+```
+
+- `optimizer="adam"` selects how the model adjusts its weights.
+- `loss="mse"` means **Mean Squared Error**: the average squared difference between original and reconstructed values.
+
+```python
+model.summary()
+```
+
+Displays the model’s layers, output shapes, and number of parameters. The summary shows 140 input values, a 16-value compressed representation, and 140 reconstructed outputs.
+
+```python
+history = model.fit(
+    X_train, X_train,
+    epochs=10,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+- Both the input and target are `X_train`: the autoencoder learns to reproduce its input.
+- `epochs=10` trains for 10 passes through the training records.
+- `batch_size=128` processes up to 128 records before updating weights.
+- `validation_split=0.1` reserves 10% of `X_train` to monitor training.
+- `verbose=0` hides progress messages.
+- `history` stores the training results.
+
+The autoencoder is trained on normal records so it can learn their patterns. It may reconstruct unfamiliar patterns less accurately, producing larger errors.
+
+## Step 4: Detect abnormal records
+
+```python
+val_reconstruction = model.predict(X_val, verbose=0)
+val_errors = np.mean(np.square(X_val - val_reconstruction), axis=1)
+```
+
+- `model.predict(X_val, ...)` reconstructs each validation record.
+- `X_val - val_reconstruction` calculates the difference at each feature.
+- `np.square(...)` squares those differences.
+- `np.mean(..., axis=1)` averages across the 140 features for each record.
+- `val_errors` contains one reconstruction error per validation record.
+
+```python
+threshold = np.percentile(val_errors, 95)
+```
+
+- `np.percentile(..., 95)` finds the 95th percentile of normal validation errors.
+- This value becomes the cutoff: errors above it are flagged as abnormal.
+
+```python
+test_reconstruction = model.predict(X_test, verbose=0)
+test_errors = np.mean(np.square(X_test - test_reconstruction), axis=1)
+y_pred = (test_errors > threshold).astype(int)
+```
+
+- `test_reconstruction` contains the reconstructed test records.
+- `test_errors` contains the mean squared reconstruction error for each test record.
+- `test_errors > threshold` is True for records above the cutoff.
+- `.astype(int)` changes True to `1` and False to `0`.
+- Here, `1` means predicted abnormal; `0` means predicted normal.
+
+```python
+print("Reconstruction-error threshold:", threshold)
+print("Actual abnormal records in test:", int(y_test.sum()))
+print("Detected abnormal records:", int(y_pred.sum()))
+```
+
+- The first line displays the selected cutoff.
+- `y_test.sum()` counts actual abnormal records because abnormal labels are `1`.
+- `y_pred.sum()` counts records flagged as abnormal.
+
+Your output shows a threshold of **0.03335446**, **2,079** actual abnormal records, and **1,902** records flagged as abnormal. The 1,902 count can include both correctly detected abnormalities and false alarms; it does not tell us how many actual abnormalities were correctly found. A confusion matrix or precision/recall calculation would show that.
+
+## Step 5: Plot sample signals and errors
+
+```python
+normal_i = 0
+abnormal_indices = np.where(y_test == 1)[0]
+abnormal_i = int(abnormal_indices[0]) if len(abnormal_indices) else normal_i
+```
+
+- `normal_i = 0` selects the first test record.
+- `np.where(y_test == 1)[0]` finds the positions labelled abnormal.
+- The conditional expression selects the first abnormal record if one exists; otherwise it falls back to index 0.
+
+Because `X_test` is built with `X_val` first, index 0 is a normal validation record.
+
+```python
+plt.figure(figsize=(12, 4))
+plt.plot(X_test[normal_i], label="Original normal")
+plt.plot(test_reconstruction[normal_i], label="Reconstructed")
+plt.title("Normal ECG reconstruction")
+plt.legend()
+plt.show()
+```
+
+Plots the original normal record and its reconstruction. The horizontal axis is the feature index from 0 to 139.
+
+```python
+if len(abnormal_indices):
+    plt.figure(figsize=(12, 4))
+    plt.plot(X_test[abnormal_i], label="Original abnormal")
+    plt.plot(test_reconstruction[abnormal_i], label="Reconstructed")
+    plt.title("Abnormal ECG reconstruction")
+    plt.legend()
+    plt.show()
+```
+
+If there is an abnormal record, this plots it against the autoencoder’s reconstruction.
+
+```python
+plt.figure(figsize=(10, 4))
+plt.hist(test_errors, bins=40)
+plt.axvline(threshold, color="red", linestyle="--", label="Threshold")
+plt.xlabel("Reconstruction error")
+plt.ylabel("Number of records")
+plt.legend()
+plt.show()
+```
+
+- `plt.hist(test_errors, bins=40)` shows how many records fall into each of 40 reconstruction-error ranges.
+- `plt.axvline(...)` draws the red dashed threshold line.
+- Errors to the right of the threshold are classified as abnormal.
+- The remaining lines label the axes, show the legend, and display the plot.
+
+## How to interpret the attached graphs
+
+- **Normal reconstruction:** The reconstructed line follows much of the original, though the two lines do not match exactly.
+- **Abnormal reconstruction:** There are places where the reconstruction differs from the original. The model treats these differences as potential anomaly evidence.
+- **Error histogram:** The red dashed line is the decision threshold. Records with errors above it are flagged as abnormal.
+- These plots show the logic of the method. They do not alone establish that it reliably detects clinical abnormalities.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| Autoencoder | A neural network trained to reconstruct its input |
+| Encoder | Compresses the input into a smaller representation |
+| Latent representation | The compressed values created by the encoder |
+| Decoder | Reconstructs the original input from the compressed values |
+| Reconstruction error | Difference between original and reconstructed record |
+| MSE | Mean Squared Error; the average of squared differences |
+| Threshold | Error cutoff used to flag potential anomalies |
+| False positive | A normal record incorrectly flagged abnormal |
+
+## One-minute explanation for the external examiner
+
+> This practical uses a Dense autoencoder to detect unusual ECG records. The CSV is split into features and labels, and the most common label is assumed to represent normal records. Normal records are scaled and split for training and validation. The autoencoder is trained to reconstruct its own normal input using an encoder, a compressed latent layer, and a decoder. The reconstruction error is calculated as mean squared error. A threshold is set to the 95th percentile of normal validation errors; test records above it are flagged as abnormal. The graphs show example reconstructions and the distribution of errors. This is an educational anomaly-detection demonstration, not a clinical diagnosis.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is an autoencoder?**  
+   A neural network trained to reproduce its input at its output.
+
+2. **What are the two main parts of an autoencoder?**  
+   The encoder, which compresses input, and the decoder, which reconstructs it.
+
+3. **What is the latent representation?**  
+   The compact vector produced by the encoder.
+
+4. **Why train the autoencoder mainly on normal ECG records?**  
+   So it learns to reconstruct normal patterns well; unusual patterns may have larger reconstruction errors.
+
+5. **What is reconstruction error?**  
+   A measure of the difference between the original signal and its reconstruction.
+
+6. **What does MSE stand for?**  
+   Mean Squared Error.
+
+7. **Why square the errors when calculating MSE?**  
+   Squaring makes all differences non-negative and gives larger differences more influence.
+
+8. **What does `axis=1` mean in the error calculation?**  
+   Calculate the average error across the features of each record.
+
+9. **What does the 95th-percentile threshold mean?**  
+   It is a cutoff based on normal validation errors; errors above it are flagged as anomalies.
+
+10. **What does `y_pred = 1` mean?**  
+    The record is predicted to be abnormal.
+
+11. **What does `y_pred = 0` mean?**  
+    The record is predicted to be normal.
+
+12. **Why scale the ECG features?**  
+    Scaling makes the feature values more consistent for model training.
+
+13. **What does `MinMaxScaler` do?**  
+    It scales values using minimum and maximum values learned from the training data.
+
+14. **Why does the model use `X_train` as both input and target?**  
+    An autoencoder learns to reconstruct its input.
+
+15. **What does the final linear Dense layer do?**  
+    It outputs reconstructed feature values without constraining them to be positive.
+
+16. **What does the reconstruction-error histogram show?**  
+    How test records are distributed by error, with the threshold marking the anomaly cutoff.
+
+17. **What is a false positive in this practical?**  
+    A normal record whose reconstruction error exceeds the threshold.
+
+18. **Does “1,902 detected abnormal records” mean all 1,902 are true abnormalities?**  
+    No. Some could be false positives; a confusion matrix is needed to compare predictions with actual labels.
+
+19. **What important limitation is present in this code’s test construction?**  
+    `X_val` is used to set the threshold and is also included as the normal portion of `X_test`, so those normal test records are not independent.
+
+20. **Can this autoencoder diagnose a patient?**  
+    No. This is a learning exercise on a dataset; clinical diagnosis requires validated methods and qualified medical professionals.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 32: ECG Anomaly Detection Using Autoencoder
+**Subject:** Deep Learning | SPPU 2019 Pattern | B.E. IT
+
+## 1. Aim of the Practical
+
+To develop an Autoencoder-based anomaly detection model to identify abnormal ECG signal patterns using an ECG dataset.
+
+### What is an Autoencoder?
+
+An **Autoencoder** is a type of Artificial Neural Network that learns to compress input data and then reconstruct the original data.
+
+It has two main parts:
+
+1. **Encoder:** Compresses the input data into a smaller representation.
+2. **Decoder:** Reconstructs the original data from the compressed representation.
+
+### What is ECG?
+
+ECG stands for **Electrocardiogram**.
+
+It is a test that records the electrical activity of the heart.
+
+### What is Anomaly Detection?
+
+Anomaly detection is the process of identifying unusual or abnormal patterns in data.
+
+**Example:**
+- Normal ECG signals are reconstructed properly by the model.
+- Abnormal ECG signals are reconstructed with larger errors.
+- If reconstruction error exceeds a particular threshold, the signal is classified as abnormal.
+
+### Working of Autoencoder
+
+Remember this flow:
+
+**Input ECG → Encoder → Compressed Representation → Decoder → Reconstructed ECG → Calculate Error → Detect Anomaly**
+
+---
+
+# 2. Code Explanation (Step by Step)
+
+## Step 1: Import Libraries and Load ECG Dataset
+
+### Part A: Import Libraries
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+### Explanation
+
+| Code | Meaning |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical calculations and array operations. |
+| `import pandas as pd` | Imports Pandas for reading and handling datasets. |
+| `import matplotlib.pyplot as plt` | Used to create graphs and visualize ECG signals. |
+| `train_test_split` | Divides the dataset into training and validation data. |
+| `MinMaxScaler` | Normalizes the ECG values into a fixed range. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input shape of the neural network. |
+| `Dense` | Creates fully connected neural network layers. |
+
+### Part B: Load the ECG Dataset
+
+```python
+data = pd.read_csv("ecg.csv", header=None)
+```
+
+Explanation:
+
+- `pd.read_csv()` – Reads the CSV dataset.
+- `"ecg.csv"` – Name of the ECG dataset.
+- `header=None` – Specifies that the dataset does not contain column headings.
+- `data` – Stores the complete dataset.
+
+**Purpose:** Loads ECG signals and their corresponding labels.
+
+### Part C: Separate Features and Labels
+
+```python
+X = data.iloc[:, :-1].to_numpy(dtype="float32")
+```
+
+Explanation:
+
+- `data.iloc` – Selects rows and columns using their positions.
+- `:` – Selects all rows.
+- `:-1` – Selects all columns except the last column.
+- `to_numpy()` – Converts the selected data into a NumPy array.
+- `dtype="float32"` – Converts values into 32-bit floating-point numbers.
+- `X` – Stores ECG signal features.
+
+**Remember:** X contains ECG signal values.
+
+```python
+labels = data.iloc[:, -1].to_numpy()
+```
+
+Explanation:
+
+- `-1` – Selects the last column.
+- `to_numpy()` – Converts the labels into an array.
+- `labels` – Stores the class labels of ECG records.
+
+**Remember:** Labels indicate whether an ECG record is normal or abnormal.
+
+### Part D: Identify the Normal Class
+
+```python
+normal_label = pd.Series(labels).value_counts().idxmax()
+```
+
+Explanation:
+
+- `pd.Series(labels)` – Converts labels into a Pandas Series.
+- `value_counts()` – Counts the occurrences of each class.
+- `idxmax()` – Returns the label having the highest count.
+- `normal_label` – Stores the most frequently occurring class.
+
+**Your output:**
+
+```text
+Most common class (assumed normal): 1.0
+```
+
+This means class `1.0` is assumed to represent normal ECG records.
+
+**Important:** Your code assumes that the most frequent class is normal.
+
+### Part E: Separate Normal and Abnormal ECG Records
+
+```python
+normal = X[labels == normal_label]
+```
+
+- `labels == normal_label` – Checks which records belong to the normal class.
+- `X[...]` – Selects corresponding ECG signals.
+- `normal` – Stores normal ECG records.
+
+```python
+abnormal = X[labels != normal_label]
+```
+
+- `!=` means NOT EQUAL TO.
+- Selects records that do not belong to the normal class.
+- `abnormal` – Stores abnormal ECG records.
+
+**Example:**
+
+| Variable | Stores |
+|---|---|
+| `normal` | Normal ECG signals |
+| `abnormal` | Abnormal ECG signals |
+
+### Part F: Split Normal Data
+
+```python
+X_train, X_val = train_test_split(normal, test_size=0.2, random_state=42)
+```
+
+Explanation:
+
+- `train_test_split()` – Divides the dataset.
+- `normal` – Only normal ECG signals are provided.
+- `test_size=0.2` – Uses 20% for validation and 80% for training.
+- `random_state=42` – Ensures reproducible splitting.
+- `X_train` – Stores training ECG signals.
+- `X_val` – Stores validation ECG signals.
+
+**Important:** The model is trained primarily using normal ECG signals.
+
+---
+
+## Step 2: Normalize the ECG Features
+
+```python
+scaler = MinMaxScaler()
+```
+
+Creates a MinMaxScaler object for normalizing the dataset.
+
+### Fit and Transform Training Data
+
+```python
+X_train = scaler.fit_transform(X_train)
+```
+
+- `fit()` – Learns the minimum and maximum values from training data.
+- `transform()` – Scales the data.
+- `fit_transform()` – Performs both operations together.
+
+The values are normalized between 0 and 1.
+
+### Transform Validation Data
+
+```python
+X_val = scaler.transform(X_val)
+```
+
+Normalizes validation data using the same scaling values learned from training data.
+
+**Why not use fit_transform again?**
+
+Because we should use the same scaling range for training and validation data.
+
+### Prepare Test Data
+
+```python
+X_test = np.vstack([X_val, scaler.transform(abnormal)])
+```
+
+Explanation:
+
+- `scaler.transform(abnormal)` – Normalizes abnormal ECG signals.
+- `np.vstack()` – Joins arrays vertically.
+- `X_val` – Contains normal ECG signals.
+- `abnormal` – Contains abnormal ECG signals.
+- `X_test` – Contains both normal and abnormal ECG signals.
+
+### Create Actual Test Labels
+
+```python
+y_test = np.concatenate([
+    np.zeros(len(X_val), dtype=int),
+    np.ones(len(abnormal), dtype=int)
+])
+```
+
+Explanation:
+
+- `np.zeros()` – Creates an array containing zeros.
+- `len(X_val)` – Number of normal validation records.
+- `np.ones()` – Creates an array containing ones.
+- `len(abnormal)` – Number of abnormal records.
+- `np.concatenate()` – Joins both arrays.
+
+Here:
+
+| Label | Meaning |
+|---|---|
+| 0 | Normal ECG |
+| 1 | Abnormal ECG |
+
+**Important:** These labels are used to compare actual and predicted abnormalities.
+
+---
+
+# Step 3: Build and Train the Autoencoder
+
+This is the most important part of the practical.
+
+### Part A: Build the Model
+
+```python
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(32, activation="relu"),
+    Dense(16, activation="relu"),
+    Dense(32, activation="relu"),
+    Dense(X_train.shape[1], activation="linear")
+])
+```
+
+Let's understand each layer.
+
+### 1. Input Layer
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size of the model.
+- `X_train.shape[1]` gives the number of features in each ECG record.
+- In your output, the number of features is 140.
+
+Therefore, the input contains 140 values.
+
+### 2. First Encoder Layer
+
+```python
+Dense(32, activation="relu")
+```
+
+- `Dense` – Fully connected layer.
+- `32` – Contains 32 neurons.
+- `relu` – Activation function.
+
+**Purpose:** Reduces the input from 140 features to 32 features.
+
+### 3. Second Encoder Layer
+
+```python
+Dense(16, activation="relu")
+```
+
+- Contains 16 neurons.
+- Compresses the data further.
+- Creates a smaller representation of the original ECG signal.
+
+**This is the compressed latent representation.**
+
+### 4. First Decoder Layer
+
+```python
+Dense(32, activation="relu")
+```
+
+- Contains 32 neurons.
+- Starts reconstructing the compressed ECG representation.
+
+### 5. Output Layer
+
+```python
+Dense(X_train.shape[1], activation="linear")
+```
+
+- Contains 140 neurons.
+- Reconstructs the original ECG signal.
+- `linear` activation allows continuous numerical output values.
+
+### Architecture of Your Autoencoder
+
+Remember this:
+
+**140 → 32 → 16 → 32 → 140**
+
+| Layer | Neurons | Purpose |
+|---|---:|---|
+| Input | 140 | Original ECG signal |
+| Encoder 1 | 32 | Compresses data |
+| Encoder 2 | 16 | Latent representation |
+| Decoder 1 | 32 | Reconstructs data |
+| Output | 140 | Reconstructed ECG |
+
+### Part B: Compile the Model
+
+```python
+model.compile(optimizer="adam", loss="mse")
+```
+
+Explanation:
+
+| Parameter | Meaning |
+|---|---|
+| `optimizer="adam"` | Updates model weights to minimize errors. |
+| `loss="mse"` | Uses Mean Squared Error to calculate reconstruction error. |
+
+**What is MSE?**
+
+MSE stands for Mean Squared Error.
+
+It calculates the average squared difference between original and reconstructed values.
+
+Formula:
+
+\[
+MSE = \frac{1}{n}\sum_{i=1}^{n}(X_i-\hat X_i)^2
+\]
+
+Where:
+
+- \(X_i\) = Original value.
+- \(\hat X_i\) = Reconstructed value.
+- \(n\) = Number of features.
+
+**Remember:** Lower MSE means better reconstruction.
+
+### Part C: Display Model Architecture
+
+```python
+model.summary()
+```
+
+Displays:
+- Layer names.
+- Output shapes.
+- Number of parameters.
+- Total trainable parameters.
+
+**Your output:**
+
+| Layer | Output Shape | Parameters |
+|---|---|---:|
+| Dense | (None, 32) | 4,512 |
+| Dense | (None, 16) | 528 |
+| Dense | (None, 32) | 544 |
+| Dense | (None, 140) | 4,620 |
+
+Total parameters = **10,204**
+
+### Part D: Train the Model
+
+```python
+history = model.fit(
+    X_train,
+    X_train,
+    epochs=10,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+Explanation:
+
+| Code | Meaning |
+|---|---|
+| `model.fit()` | Trains the autoencoder. |
+| First `X_train` | Input ECG signals. |
+| Second `X_train` | Expected output ECG signals. |
+| `epochs=10` | Trains the model for 10 iterations over the complete training dataset. |
+| `batch_size=128` | Processes 128 records in each batch. |
+| `validation_split=0.1` | Uses 10% of training data for validation. |
+| `verbose=0` | Hides training progress. |
+| `history` | Stores training history. |
+
+**Important Viva Question: Why is X_train given twice?**
+
+Because an autoencoder tries to reconstruct its own input.
+
+Input = Original ECG signal.
+
+Expected output = Same original ECG signal.
+
+The model learns to reproduce normal ECG patterns.
+
+---
+
+# Step 4: Detect Abnormal ECG Records
+
+This step identifies whether ECG signals are normal or abnormal.
+
+### Part A: Reconstruct Validation Data
+
+```python
+val_reconstruction = model.predict(X_val, verbose=0)
+```
+
+- `model.predict()` – Generates predictions.
+- `X_val` – Normal validation ECG signals.
+- `val_reconstruction` – Stores reconstructed ECG signals.
+
+### Part B: Calculate Validation Reconstruction Error
+
+```python
+val_errors = np.mean(
+    np.square(X_val - val_reconstruction),
+    axis=1
+)
+```
+
+Explanation:
+
+1. `X_val - val_reconstruction` – Calculates the difference between original and reconstructed signals.
+2. `np.square()` – Squares the differences.
+3. `np.mean()` – Calculates the average squared error.
+4. `axis=1` – Calculates error separately for every ECG record.
+
+**Purpose:** Calculates the reconstruction error for each normal validation record.
+
+### Part C: Calculate Threshold
+
+```python
+threshold = np.percentile(val_errors, 95)
+```
+
+- `np.percentile()` – Calculates a specified percentile.
+- `val_errors` – Reconstruction errors of normal validation records.
+- `95` – Calculates the 95th percentile.
+
+**What is Threshold?**
+
+A threshold is a fixed error value used to decide whether an ECG signal is normal or abnormal.
+
+In this practical:
+
+- Error ≤ Threshold → Normal.
+- Error > Threshold → Abnormal.
+
+Your output:
+
+```text
+Reconstruction-error threshold: 0.03335446
+```
+
+This means that signals having reconstruction errors greater than approximately 0.03335 are classified as abnormal.
+
+### Part D: Reconstruct Test Data
+
+```python
+test_reconstruction = model.predict(X_test, verbose=0)
+```
+
+Reconstructs all test ECG signals using the trained autoencoder.
+
+### Part E: Calculate Test Reconstruction Errors
+
+```python
+test_errors = np.mean(
+    np.square(X_test - test_reconstruction),
+    axis=1
+)
+```
+
+Calculates the reconstruction error for every test ECG record.
+
+### Part F: Identify Abnormal Signals
+
+```python
+y_pred = (test_errors > threshold).astype(int)
+```
+
+Explanation:
+
+- `test_errors > threshold` – Checks whether each reconstruction error exceeds the threshold.
+- If true, the result is 1.
+- If false, the result is 0.
+- `astype(int)` – Converts True/False into 1/0.
+- `y_pred` – Stores predicted classifications.
+
+| Condition | Prediction |
+|---|---|
+| Error ≤ Threshold | 0 – Normal |
+| Error > Threshold | 1 – Abnormal |
+
+### Part G: Display Detection Results
+
+```python
+print("Reconstruction-error threshold:", threshold)
+```
+
+Displays the calculated threshold.
+
+```python
+print("Actual abnormal records in test:", int(y_test.sum()))
+```
+
+Displays the actual number of abnormal records.
+
+Why `sum()`?
+
+Because abnormal records are represented by 1 and normal records by 0.
+
+Adding all labels gives the total number of abnormal records.
+
+```python
+print("Detected abnormal records:", int(y_pred.sum()))
+```
+
+Displays the total number of records predicted as abnormal.
+
+**Your output:**
+
+```text
+Reconstruction-error threshold: 0.03335446
+
+Actual abnormal records in test: 2079
+
+Detected abnormal records: 1902
+```
+
+Meaning:
+
+- Actual abnormal ECG records = 2079.
+- Model detected 1902 records as abnormal.
+- The remaining abnormal records were not detected by the model.
+
+**Important:** 1902 is the total number predicted as abnormal, not necessarily the number correctly detected. To calculate correctly detected abnormalities, we would need to compare `y_pred` with `y_test`.
+
+---
+
+# Step 5: Plot ECG Signals and Reconstruction Errors
+
+This step visually compares original and reconstructed ECG signals.
+
+## Part A: Select Normal and Abnormal Samples
+
+```python
+normal_i = 0
+```
+
+Selects the first test record for displaying the normal ECG signal.
+
+```python
+abnormal_indices = np.where(y_test == 1)[0]
+```
+
+Explanation:
+
+- `np.where()` – Finds positions satisfying a condition.
+- `y_test == 1` – Checks for abnormal ECG records.
+- `[0]` – Extracts the index positions.
+- `abnormal_indices` – Stores the positions of abnormal records.
+
+```python
+abnormal_i = int(abnormal_indices[0]) if len(abnormal_indices) else normal_i
+```
+
+- `len(abnormal_indices)` – Checks whether abnormal records exist.
+- `abnormal_indices[0]` – Selects the first abnormal record.
+- `int()` – Converts the index into an integer.
+- `else normal_i` – If no abnormal record exists, selects the normal sample.
+
+## Part B: Plot Normal ECG Reconstruction
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a graph with width 12 and height 4.
+
+```python
+plt.plot(X_test[normal_i], label="Original normal")
+```
+
+Plots the original normal ECG signal.
+
+```python
+plt.plot(test_reconstruction[normal_i], label="Reconstructed")
+```
+
+Plots the reconstructed normal ECG signal.
+
+```python
+plt.title("Normal ECG reconstruction")
+```
+
+Sets the graph title.
+
+```python
+plt.legend()
+```
+
+Displays labels for both lines.
+
+```python
+plt.show()
+```
+
+Displays the graph.
+
+**Purpose:** Compares the original normal ECG signal with its reconstructed version.
+
+## Part C: Plot Abnormal ECG Reconstruction
+
+```python
+if len(abnormal_indices):
+```
+
+Checks whether abnormal ECG records are available.
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a new graph.
+
+```python
+plt.plot(X_test[abnormal_i], label="Original abnormal")
+```
+
+Plots the original abnormal ECG signal.
+
+```python
+plt.plot(test_reconstruction[abnormal_i], label="Reconstructed")
+```
+
+Plots the reconstructed abnormal ECG signal.
+
+```python
+plt.title("Abnormal ECG reconstruction")
+```
+
+Sets the graph title.
+
+```python
+plt.legend()
+plt.show()
+```
+
+Displays the graph with labels.
+
+**Purpose:** Compares original abnormal ECG signals with reconstructed signals.
+
+Generally, abnormal ECG signals have larger reconstruction errors because the model was trained primarily on normal signals.
+
+## Part D: Plot Reconstruction Error Histogram
+
+```python
+plt.figure(figsize=(10, 4))
+```
+
+Creates a histogram figure.
+
+```python
+plt.hist(test_errors, bins=40)
+```
+
+- `plt.hist()` – Creates a histogram.
+- `test_errors` – Contains reconstruction errors.
+- `bins=40` – Divides the values into 40 intervals.
+
+```python
+plt.axvline(threshold, color="red", linestyle="--", label="Threshold")
+```
+
+- `axvline()` – Draws a vertical line.
+- `threshold` – Position of the threshold.
+- `color="red"` – Makes the line red.
+- `linestyle="--"` – Makes the line dashed.
+- `label` – Names the line.
+
+```python
+plt.xlabel("Reconstruction error")
+```
+
+Sets the X-axis label.
+
+```python
+plt.ylabel("Number of records")
+```
+
+Sets the Y-axis label.
+
+```python
+plt.legend()
+plt.show()
+```
+
+Displays the threshold legend and histogram.
+
+**Purpose:** Helps visualize the distribution of reconstruction errors and identify records exceeding the threshold.
+
+---
+
+# 3. Understanding Your Output
+
+### Output 1: Most Common Class
+
+```text
+Most common class (assumed normal): 1.0
+```
+
+The dataset's most frequent class is 1.0, which the code assumes represents normal ECG signals.
+
+### Output 2: Model Summary
+
+```text
+Total params: 10,204
+Trainable params: 10,204
+Non-trainable params: 0
+```
+
+Meaning:
+
+- Total parameters = 10,204.
+- Trainable parameters = 10,204.
+- Non-trainable parameters = 0.
+
+All model parameters can be updated during training.
+
+### Output 3: Reconstruction Error Threshold
+
+```text
+Reconstruction-error threshold: 0.03335446
+```
+
+The threshold is calculated using the 95th percentile of normal validation reconstruction errors.
+
+### Output 4: Actual Abnormal Records
+
+```text
+Actual abnormal records in test: 2079
+```
+
+There are 2079 actual abnormal ECG records in the test dataset.
+
+### Output 5: Detected Abnormal Records
+
+```text
+Detected abnormal records: 1902
+```
+
+The model classified 1902 test records as abnormal.
+
+**Note:** This number includes both correctly and incorrectly classified records.
+
+### Output 6: ECG Graphs
+
+You get three types of visualizations:
+
+| Graph | Purpose |
+|---|---|
+| Normal ECG reconstruction | Compares original and reconstructed normal ECG. |
+| Abnormal ECG reconstruction | Compares original and reconstructed abnormal ECG. |
+| Reconstruction error histogram | Displays error distribution and threshold. |
+
+### Final Result
+
+The Autoencoder model is successfully implemented to reconstruct normal ECG signals and identify potential abnormal ECG records using reconstruction errors and a threshold.
+
+---
+
+# 4. Important Viva Questions and Answers
+
+## Basic Autoencoder Questions
+
+**Q1. What is an Autoencoder?**
+
+An Autoencoder is an artificial neural network that learns to compress input data and reconstruct the original data.
+
+**Q2. What are the two main parts of an Autoencoder?**
+
+1. Encoder – Compresses the input data.
+2. Decoder – Reconstructs the original data.
+
+**Q3. What is ECG?**
+
+ECG stands for Electrocardiogram. It records the electrical activity of the heart.
+
+**Q4. What is anomaly detection?**
+
+Anomaly detection is the process of identifying unusual or abnormal patterns in data.
+
+**Q5. Why is an Autoencoder used for ECG anomaly detection?**
+
+It learns normal ECG patterns and identifies abnormal signals using reconstruction errors.
+
+**Q6. What is the difference between normal and abnormal ECG signals in this practical?**
+
+Normal signals generally have lower reconstruction errors, whereas abnormal signals may have higher reconstruction errors.
+
+## Dataset and Preprocessing Questions
+
+**Q7. Which dataset is used in this practical?**
+
+The ECG dataset stored in `ecg.csv`.
+
+**Q8. Why do we use Pandas?**
+
+To read and manipulate the ECG dataset.
+
+**Q9. Why do we use NumPy?**
+
+For numerical calculations and array operations.
+
+**Q10. What is MinMaxScaler?**
+
+MinMaxScaler is a preprocessing technique that scales numerical values into a fixed range, usually 0 to 1.
+
+**Q11. Why is normalization required?**
+
+It brings all features into a similar range and helps the neural network train effectively.
+
+**Q12. What is `train_test_split()`?**
+
+It divides data into separate training and validation sets.
+
+**Q13. Why is only normal ECG data used for training?**
+
+So that the model learns normal ECG patterns and can identify unusual patterns during testing.
+
+## Encoder and Decoder Questions
+
+**Q14. What is an Encoder?**
+
+The encoder compresses input data into a smaller representation.
+
+**Q15. What is a Decoder?**
+
+The decoder reconstructs the original input from the compressed representation.
+
+**Q16. What is latent representation?**
+
+It is the compressed representation of the input data generated by the encoder.
+
+**Q17. What is the architecture of your Autoencoder?**
+
+140 → 32 → 16 → 32 → 140.
+
+**Q18. What is a Dense layer?**
+
+A Dense layer is a fully connected neural network layer in which each neuron connects to neurons in the previous layer.
+
+**Q19. What is ReLU?**
+
+ReLU stands for Rectified Linear Unit. It is an activation function that returns zero for negative values and the same value for positive values.
+
+**Q20. Why is linear activation used in the output layer?**
+
+Because the model needs to reconstruct continuous numerical ECG values.
+
+## Training Questions
+
+**Q21. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q22. What is MSE?**
+
+MSE stands for Mean Squared Error. It measures the average squared difference between original and reconstructed values.
+
+**Q23. Why is MSE used in this practical?**
+
+Because the Autoencoder reconstructs numerical ECG signals, and MSE measures reconstruction error.
+
+**Q24. Why is X_train given twice in model.fit()?**
+
+Because the Autoencoder tries to reconstruct its own input.
+
+**Q25. What is an epoch?**
+
+One complete pass of the entire training dataset through the neural network.
+
+**Q26. What is batch size?**
+
+It is the number of training samples processed before updating the model weights.
+
+In this practical, batch size is 128.
+
+**Q27. What is Adam optimizer?**
+
+Adam is an optimization algorithm used to update model weights and minimize loss.
+
+## Anomaly Detection Questions
+
+**Q28. What is reconstruction error?**
+
+It is the difference between the original input and reconstructed output.
+
+**Q29. What is a threshold?**
+
+A threshold is a fixed error value used to classify records as normal or abnormal.
+
+**Q30. What is the threshold used in this practical?**
+
+The 95th percentile of normal validation reconstruction errors.
+
+**Q31. How does the model identify an abnormal ECG?**
+
+If reconstruction error is greater than the threshold, the record is classified as abnormal.
+
+**Q32. What does `np.percentile()` do?**
+
+It calculates the specified percentile of an array.
+
+**Q33. What does `np.vstack()` do?**
+
+It joins arrays vertically.
+
+**Q34. What does `np.concatenate()` do?**
+
+It joins multiple arrays into one array.
+
+**Q35. What does `np.where()` do?**
+
+It returns the positions of elements satisfying a given condition.
+
+**Q36. What does `astype(int)` do?**
+
+It converts values into integers.
+
+**Q37. What is the difference between y_test and y_pred?**
+
+- `y_test` contains actual labels.
+- `y_pred` contains predicted labels.
+
+## Graph and Application Questions
+
+**Q38. Why do we plot original and reconstructed ECG signals?**
+
+To visually compare the original signals with the reconstructed signals.
+
+**Q39. What is a histogram?**
+
+A histogram is a graph that displays the frequency distribution of numerical values.
+
+**Q40. What is the purpose of the threshold line in the histogram?**
+
+It separates reconstruction errors classified as normal from those classified as abnormal.
+
+**Q41. Which library is used for plotting graphs?**
+
+Matplotlib.
+
+**Q42. What are the applications of Autoencoders?**
+
+1. Anomaly detection.
+2. Image denoising.
+3. Data compression.
+4. Feature extraction.
+5. Fraud detection.
+6. Medical signal analysis.
+
+---
+
+# 5. Quick Revision Table – Practical in 10 Steps
+
+| Step | What happens? |
+|---|---|
+| 1. Import libraries | Import NumPy, Pandas, Matplotlib and Keras. |
+| 2. Load dataset | Read `ecg.csv`. |
+| 3. Separate data | Separate normal and abnormal ECG records. |
+| 4. Normalize data | Apply MinMaxScaler. |
+| 5. Build encoder | Compress 140 → 32 → 16. |
+| 6. Build decoder | Reconstruct 16 → 32 → 140. |
+| 7. Train model | Train using normal ECG signals. |
+| 8. Calculate error | Calculate reconstruction error using MSE. |
+| 9. Detect anomalies | Compare errors with the threshold. |
+| 10. Display output | Plot ECG signals and error histogram. |
+
+## 6. Most Important Viva Questions – Learn These First
+
+| Question | Answer |
+|---|---|
+| What is Autoencoder? | Neural network used for data reconstruction. |
+| What is ECG? | Electrocardiogram. |
+| What is Encoder? | Compresses input data. |
+| What is Decoder? | Reconstructs input data. |
+| What is latent representation? | Compressed data representation. |
+| Which optimizer? | Adam. |
+| Which loss function? | Mean Squared Error (MSE). |
+| Which activation function? | ReLU and Linear. |
+| Which scaler? | MinMaxScaler. |
+| Training data? | Normal ECG signals. |
+| Epochs? | 10 |
+| Batch size? | 128 |
+| Threshold? | 95th percentile. |
+| Error greater than threshold? | Abnormal. |
+| Error below threshold? | Normal. |
+| Input features? | 140 |
+| Compressed features? | 16 |
+| Output features? | 140 |
+| Dataset file? | ecg.csv |
+| Graph library? | Matplotlib |
+
+### 7. Three Important Concepts to Understand Properly
+
+These are particularly important because external examiners may ask follow-up questions.
+
+**1. Why train only on normal ECG signals?**
+
+Because the model should learn what normal ECG patterns look like. When it receives an abnormal signal, it may not reconstruct it properly, resulting in a higher reconstruction error.
+
+**2. Why do we need a threshold?**
+
+The threshold helps the model decide whether a signal is normal or abnormal.
+
+- Below or equal to threshold = Normal.
+- Above threshold = Abnormal.
+
+**3. What is the difference between Encoder and Decoder?**
+
+- Encoder compresses data.
+- Decoder reconstructs data.
+
+**Easy trick to remember:**
+
+Encoder = Compress.
+
+Decoder = Reconstruct.
+
+Autoencoder = Compress + Reconstruct.

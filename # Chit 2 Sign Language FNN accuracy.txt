@@ -1,0 +1,1221 @@
+# Chit 2: Sign Language FNN: accuracy and loss graphs
+
+2. Construct a Feedforward Neural Network for Sign Language alphabet recognition. Train the model using the training dataset and evaluate it using the testing dataset. Display the training accuracy, testing accuracy and loss graph. 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+train_accuracy = history.history["accuracy"][-1]
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+
+
+# Step 8: Plot accuracy and loss
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 2: Feedforward Neural Network for Sign Language Alphabet Recognition – Training Accuracy, Testing Accuracy and Loss Graph
+
+**Subject:** Deep Learning  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+### Aim
+To construct a Feedforward Neural Network (FNN) for Sign Language Alphabet Recognition using the Sign Language MNIST dataset, train the model using training data, evaluate it using testing data, and display training accuracy, testing accuracy and loss graphs.
+
+---
+
+# 1. Understanding the Practical
+
+This practical is almost the same as Practical 1.
+
+The main difference is that **Practical 1 focuses on test accuracy, whereas Practical 2 focuses on training accuracy, testing accuracy, validation and graphical representation of accuracy and loss.**
+
+### What does this practical perform?
+
+1. Import the required libraries.
+2. Load the Sign Language MNIST dataset.
+3. Normalize the pixel values.
+4. Encode the labels.
+5. Flatten the images.
+6. Create a Feedforward Neural Network.
+7. Compile and train the model.
+8. Calculate training and testing accuracy.
+9. Display Accuracy and Loss graphs.
+
+### Expected Output
+
+Your program produces:
+
+- Training Accuracy: 99.47%
+- Testing Accuracy: 75.96%
+- Accuracy Graph
+- Loss Graph
+
+---
+
+# 2. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+Let's understand each line.
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical calculations and array operations. |
+| `import tensorflow as tf` | Imports TensorFlow for building and training neural networks. |
+| `from tensorflow.keras import Sequential` | Imports Sequential to create a neural network layer by layer. |
+| `from tensorflow.keras.layers import Input, Dense` | Imports Input and Dense layers. |
+| `import pandas as pd` | Imports Pandas to read and handle CSV datasets. |
+| `from sklearn.preprocessing import LabelEncoder` | Imports LabelEncoder to convert labels into numerical class indices. |
+| `import matplotlib.pyplot as plt` | Imports Matplotlib for creating graphs and visualizations. |
+
+### New Library in Practical 2
+
+**`import matplotlib.pyplot as plt`**
+
+This is an additional library compared to Practical 1.
+
+- `matplotlib` – Python library used for creating graphs.
+- `pyplot` – Module used for plotting graphs.
+- `plt` – Short name used to access pyplot functions.
+
+**Why do we use Matplotlib?**
+
+To display:
+1. Training and validation accuracy graph.
+2. Training and validation loss graph.
+
+**Viva Question: What is Matplotlib?**
+
+Matplotlib is a Python library used to create graphs, charts and visualizations.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**Explanation:**
+
+- `pd.read_csv()` reads CSV files.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+We load two datasets:
+
+| Dataset | Purpose |
+|---|---|
+| Training Dataset | Used to train the neural network. |
+| Testing Dataset | Used to evaluate the trained neural network. |
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+These lines perform three operations:
+
+**1. `drop(columns="label")`**
+
+Removes the label column because we want to separate image pixels from their corresponding labels.
+
+**2. `to_numpy(dtype="float32")`**
+
+Converts the dataset into NumPy arrays with float32 data type.
+
+**3. `/ 255.0`**
+
+Normalizes pixel values between 0 and 1.
+
+Example:
+
+| Original Value | Normalized Value |
+|---:|---:|
+| 0 | 0.0 |
+| 128 | 0.50 |
+| 255 | 1.0 |
+
+**Why normalization?**
+
+It helps the neural network learn efficiently by keeping input values within a smaller range.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+**Line 1:**
+
+Creates an object of LabelEncoder.
+
+**Line 2:**
+
+- `fit_transform()` learns the unique classes and converts them into numerical indices.
+- `y_train` stores encoded training labels.
+
+**Line 3:**
+
+- `transform()` converts testing labels using the mapping learned from training labels.
+- `y_test` stores encoded testing labels.
+
+**Important:** We use `transform()` for testing data because we want the same label mapping for both training and testing.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+```
+
+**First line:**
+
+Converts numerical class indices into alphabet characters using ASCII values.
+
+- `chr()` converts ASCII values into characters.
+- `65` represents uppercase A.
+- `encoder.classes_` contains the original classes.
+
+**Second line:**
+
+Defines the image dimensions.
+
+- 28 = Height
+- 28 = Width
+- 1 = Grayscale channel
+
+Note: `image_shape` is defined but not used later in this program.
+
+---
+
+## Step 3: Flatten the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+### What is Flattening?
+
+Flattening converts a two-dimensional image into a one-dimensional array.
+
+Original image:
+
+```text
+28 × 28 pixels
+```
+
+After flattening:
+
+```text
+784 features
+```
+
+Because:
+
+28 × 28 = 784.
+
+### Understanding `reshape()`
+
+- `reshape()` changes the dimensions of an array.
+- `-1` automatically calculates the number of samples.
+- `28, 28` represents image height and width.
+- `784` represents the total number of pixels.
+
+**Why do we flatten images?**
+
+Because Dense layers in our Feedforward Neural Network expect one-dimensional feature vectors.
+
+---
+
+## Step 4: Build the Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates our Feedforward Neural Network.
+
+### 1. `num_classes = len(class_names)`
+
+- `len()` counts the number of elements.
+- `num_classes` stores the total number of classes.
+
+Here:
+
+```text
+num_classes = 24
+```
+
+### 2. `model = Sequential([...])`
+
+Creates a Sequential Neural Network in which layers are arranged one after another.
+
+### Understanding the Layers
+
+| Layer | Neurons | Activation |
+|---|---:|---|
+| Input Layer | 784 | None |
+| Hidden Layer 1 | 256 | ReLU |
+| Hidden Layer 2 | 128 | ReLU |
+| Output Layer | 24 | Softmax |
+
+**Input Layer:**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+Accepts 784 input features for each image.
+
+**First Hidden Layer:**
+
+```python
+Dense(256, activation="relu")
+```
+
+- Dense = Fully connected layer.
+- 256 = Number of neurons.
+- ReLU = Activation function.
+
+ReLU converts negative values into zero and keeps positive values unchanged.
+
+Formula:
+
+`f(x) = max(0, x)`
+
+**Second Hidden Layer:**
+
+```python
+Dense(128, activation="relu")
+```
+
+Creates another fully connected layer with 128 neurons.
+
+**Output Layer:**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+Creates 24 output neurons.
+
+Softmax converts output values into probabilities and helps the model predict the most likely alphabet class.
+
+---
+
+## Step 5: Compile the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation prepares the neural network for training.
+
+It contains three important parameters.
+
+| Parameter | Meaning |
+|---|---|
+| Optimizer | Updates weights to reduce errors. |
+| Loss | Measures prediction error. |
+| Metrics | Measures model performance. |
+
+### 1. Optimizer = Adam
+
+Adam stands for Adaptive Moment Estimation.
+
+It updates the weights of the neural network to reduce the loss.
+
+### 2. Loss = Sparse Categorical Crossentropy
+
+Used for multi-class classification when target labels are represented as integers.
+
+Our dataset has 24 classes, so we use this loss function.
+
+### 3. Metrics = Accuracy
+
+Measures the percentage of correctly predicted images.
+
+---
+
+# 3. Most Important Part – Step 6: Train the Model
+
+This is one of the most important differences between Practical 1 and Practical 2.
+
+### Code
+
+```python
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+Let's understand every line.
+
+### 1. `history = model.fit()`
+
+- `model.fit()` trains the neural network.
+- `history` stores the training information returned by the fit function.
+
+**What is History?**
+
+History is an object that stores the training and validation performance of the model for every epoch.
+
+It stores:
+
+- Training accuracy
+- Validation accuracy
+- Training loss
+- Validation loss
+
+We need this information to draw the graphs.
+
+### 2. `X_train, y_train`
+
+- `X_train` contains training images.
+- `y_train` contains their correct labels.
+
+The model learns from these inputs.
+
+### 3. `epochs=15`
+
+The model passes through the training dataset 15 times.
+
+One epoch means one complete pass through the training dataset.
+
+### 4. `batch_size=128`
+
+The model processes 128 images together before updating its weights.
+
+### 5. `validation_split=0.1`
+
+**This is an important new parameter.**
+
+It means 10% of the training data is separated for validation.
+
+For example:
+
+Suppose we have 1,000 training images.
+
+- 90% = 900 images used for training.
+- 10% = 100 images used for validation.
+
+### What is Validation Data?
+
+Validation data is used to check how well the model performs during training.
+
+It helps us monitor the model's performance on data that is not used for updating weights.
+
+**Difference between Training, Validation and Testing:**
+
+| Data | Purpose |
+|---|---|
+| Training Data | Used to teach the model. |
+| Validation Data | Used to monitor performance during training. |
+| Testing Data | Used to evaluate the final trained model. |
+
+### 6. `verbose=0`
+
+Controls the display of training progress.
+
+- 0 = No progress display.
+- 1 = Progress bar.
+- 2 = One line per epoch.
+
+### What happens during training?
+
+1. Training images are given to the model.
+2. The model predicts the output.
+3. Predicted output is compared with actual output.
+4. Loss is calculated.
+5. Adam optimizer updates the weights.
+6. Validation accuracy and validation loss are calculated.
+7. This process repeats for 15 epochs.
+
+---
+
+# 4. Step 7: Evaluate the Model and Calculate Accuracy
+
+### Code
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This evaluates the trained model using testing data.
+
+**Understanding:**
+
+- `model.evaluate()` evaluates model performance.
+- `X_test` contains testing images.
+- `y_test` contains actual testing labels.
+- `verbose=0` hides evaluation progress.
+
+### Why is `_` used?
+
+The evaluate function returns two values:
+
+1. Loss
+2. Accuracy
+
+We only need accuracy, so `_` is used to ignore the loss value.
+
+Therefore:
+
+```python
+_, test_accuracy
+```
+
+means ignore loss and store accuracy.
+
+### Next Code
+
+```python
+train_accuracy = history.history["accuracy"][-1]
+```
+
+This is a very important line.
+
+Let's understand it.
+
+**`history.history`**
+
+Contains training information recorded during each epoch.
+
+**`["accuracy"]`**
+
+Extracts the training accuracy values for all epochs.
+
+Example:
+
+```text
+[0.30, 0.58, 0.72, 0.85, ..., 0.9947]
+```
+
+**`[-1]`**
+
+Selects the last value from the list.
+
+Since we trained for 15 epochs, it retrieves the training accuracy recorded for the 15th epoch.
+
+Therefore, `train_accuracy` stores the final training accuracy.
+
+### Next Code
+
+```python
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+```
+
+These lines display the training and testing accuracy.
+
+- `print()` displays output.
+- `f` creates an f-string.
+- `* 100` converts decimal accuracy into percentage.
+- `:.2f` displays two digits after the decimal point.
+
+### Your Output
+
+```text
+Training accuracy: 99.47%
+Testing accuracy:  75.96%
+```
+
+**Training Accuracy = 99.47%**
+
+The model correctly predicts approximately 99.47% of the training samples at the final epoch.
+
+**Testing Accuracy = 75.96%**
+
+The model correctly predicts approximately 75.96% of the testing samples.
+
+### Important Observation: Overfitting
+
+Notice the difference:
+
+- Training accuracy = 99.47%
+- Testing accuracy = 75.96%
+
+The training accuracy is much higher than testing accuracy.
+
+This suggests possible **overfitting**.
+
+What is overfitting?
+
+Overfitting occurs when a model learns the training data very well but performs poorly on unseen data.
+
+In simple words, the model memorizes training patterns instead of learning patterns that generalize well.
+
+---
+
+# 5. Step 8: Plot Accuracy and Loss Graphs
+
+This is the main additional part of Practical 2.
+
+### Code
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+**Explanation:**
+
+- `plt.figure()` creates a new figure for plotting.
+- `figsize` defines the size of the figure.
+- `12` = Width.
+- `4` = Height.
+
+It creates a figure of size 12 × 4 inches.
+
+### Next Line
+
+```python
+plt.subplot(1, 2, 1)
+```
+
+Creates the first subplot.
+
+Understanding the parameters:
+
+- 1 = Number of rows.
+- 2 = Number of columns.
+- 1 = Position of the first graph.
+
+This means we divide the figure into two parts and select the first part.
+
+### Next Lines
+
+```python
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+```
+
+These lines draw the accuracy graph.
+
+**First line:**
+
+```python
+plt.plot(history.history["accuracy"], label="Training")
+```
+
+- `plt.plot()` draws a line graph.
+- `history.history["accuracy"]` gets training accuracy values for all epochs.
+- `label="Training"` gives the line the name Training.
+
+**Second line:**
+
+```python
+plt.plot(history.history["val_accuracy"], label="Validation")
+```
+
+- `val_accuracy` contains validation accuracy values.
+- `label="Validation"` names the line Validation.
+
+Therefore, the graph contains two lines:
+
+1. Blue line = Training Accuracy.
+2. Orange line = Validation Accuracy.
+
+### Next Lines
+
+```python
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+```
+
+| Code | Purpose |
+|---|---|
+| `plt.title("Accuracy")` | Sets graph title as Accuracy. |
+| `plt.xlabel("Epoch")` | Sets X-axis label as Epoch. |
+| `plt.ylabel("Accuracy")` | Sets Y-axis label as Accuracy. |
+| `plt.legend()` | Displays labels for the graph lines. |
+
+### Now the Second Graph
+
+```python
+plt.subplot(1, 2, 2)
+```
+
+Creates the second subplot.
+
+- 1 = One row.
+- 2 = Two columns.
+- 2 = Selects the second graph position.
+
+### Next Lines
+
+```python
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+```
+
+These lines draw the loss graph.
+
+**First line:**
+
+```python
+plt.plot(history.history["loss"], label="Training")
+```
+
+Displays training loss for every epoch.
+
+**Second line:**
+
+```python
+plt.plot(history.history["val_loss"], label="Validation")
+```
+
+Displays validation loss for every epoch.
+
+### Next Lines
+
+```python
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+```
+
+| Code | Purpose |
+|---|---|
+| `plt.title("Loss")` | Sets graph title as Loss. |
+| `plt.xlabel("Epoch")` | Sets X-axis label as Epoch. |
+| `plt.ylabel("Loss")` | Sets Y-axis label as Loss. |
+| `plt.legend()` | Displays Training and Validation labels. |
+
+### Final Lines
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+**`plt.tight_layout()`**
+
+Automatically adjusts spacing between graphs so that labels and titles do not overlap.
+
+**`plt.show()`**
+
+Displays the final graphs on the screen.
+
+---
+
+# 6. Graph Explanation – Understand Your Actual Output
+
+You have provided two graphs.
+
+Let's understand them individually.
+
+## Graph 1: Accuracy Graph
+
+
+
+Your graph contains:
+
+- X-axis = Epoch
+- Y-axis = Accuracy
+- Blue line = Training Accuracy
+- Orange line = Validation Accuracy
+
+### What does the graph show?
+
+1. Initially, training accuracy is low.
+2. As epochs increase, training accuracy improves.
+3. Validation accuracy also increases.
+4. Both lines reach approximately 99% towards the final epochs.
+
+**Conclusion:** The model's training and validation accuracy improve over the epochs.
+
+## Graph 2: Loss Graph
+
+
+
+Your graph contains:
+
+- X-axis = Epoch
+- Y-axis = Loss
+- Blue line = Training Loss
+- Orange line = Validation Loss
+
+### What does the graph show?
+
+1. Initially, training and validation loss are high.
+2. As epochs increase, the loss decreases.
+3. Both lines gradually approach zero.
+4. This indicates that the model is reducing its prediction errors on the training and validation datasets.
+
+**Conclusion:** The decreasing loss indicates that the model is learning and improving its predictions.
+
+### Important Viva Question
+
+**Q. What happens to accuracy and loss during successful training?**
+
+Answer:
+
+- Accuracy generally increases.
+- Loss generally decreases.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 7. Important External Viva Questions – Practical 2
+
+These questions are especially important because Practical 2 introduces validation, History and Matplotlib.
+
+## A. Practical-Based Questions
+
+**Q1. What is the aim of this practical?**
+
+To construct a Feedforward Neural Network for Sign Language Alphabet Recognition and display training accuracy, testing accuracy and loss graphs.
+
+**Q2. Which dataset is used?**
+
+Sign Language MNIST dataset.
+
+**Q3. What is the image size?**
+
+28 × 28 pixels.
+
+**Q4. How many classes are present?**
+
+24 classes.
+
+**Q5. What is the input size of the model?**
+
+784 features.
+
+**Q6. Which neural network is used?**
+
+Feedforward Neural Network.
+
+**Q7. Which activation functions are used?**
+
+ReLU for hidden layers and Softmax for the output layer.
+
+**Q8. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q9. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+**Q10. How many epochs are used?**
+
+15 epochs.
+
+**Q11. What is the batch size?**
+
+128.
+
+**Q12. What is the training accuracy?**
+
+99.47%.
+
+**Q13. What is the testing accuracy?**
+
+75.96%.
+
+---
+
+## B. Important Validation Questions
+
+**Q14. What is validation data?**
+
+Validation data is a portion of the training dataset used to monitor the model's performance during training.
+
+**Q15. What is `validation_split=0.1`?**
+
+It means 10% of the training dataset is reserved for validation.
+
+**Q16. What is the difference between validation and testing data?**
+
+Validation data is used to monitor model performance during training, whereas testing data is used to evaluate the final trained model.
+
+**Q17. What is the purpose of validation?**
+
+It helps monitor the model's performance and identify possible overfitting.
+
+**Q18. What is overfitting?**
+
+Overfitting occurs when the model performs very well on training data but poorly on unseen data.
+
+**Q19. What is underfitting?**
+
+Underfitting occurs when the model fails to learn important patterns from the training data.
+
+**Q20. What is generalization?**
+
+Generalization is the ability of a model to perform well on new, unseen data.
+
+---
+
+## C. Accuracy and Loss Graph Questions
+
+**Q21. Which library is used to plot graphs?**
+
+Matplotlib.
+
+**Q22. What is the purpose of `plt.plot()`?**
+
+It is used to draw line graphs.
+
+**Q23. What is the purpose of `plt.subplot()`?**
+
+It divides a figure into multiple sections to display multiple graphs.
+
+**Q24. What is the purpose of `plt.show()`?**
+
+It displays the generated graphs.
+
+**Q25. What is the purpose of `plt.legend()`?**
+
+It displays labels that identify different lines in a graph.
+
+**Q26. What is the X-axis in your graph?**
+
+Epoch.
+
+**Q27. What is the Y-axis in the accuracy graph?**
+
+Accuracy.
+
+**Q28. What is the Y-axis in the loss graph?**
+
+Loss.
+
+**Q29. What happens to accuracy during successful training?**
+
+Accuracy generally increases.
+
+**Q30. What happens to loss during successful training?**
+
+Loss generally decreases.
+
+**Q31. What is the difference between accuracy and loss?**
+
+- Accuracy measures the percentage of correct predictions.
+- Loss measures the prediction error.
+
+**Q32. Why do we plot accuracy and loss graphs?**
+
+To understand how the model learns and how its performance changes during training.
+
+---
+
+## D. Code-Based Questions
+
+**Q33. What is `history` in your program?**
+
+History is an object returned by `model.fit()` that stores training and validation performance for each epoch.
+
+**Q34. What is `history.history["accuracy"]`?**
+
+It stores training accuracy values for all epochs.
+
+**Q35. What is `history.history["val_accuracy"]`?**
+
+It stores validation accuracy values for all epochs.
+
+**Q36. What is `history.history["loss"]`?**
+
+It stores training loss values for all epochs.
+
+**Q37. What is `history.history["val_loss"]`?**
+
+It stores validation loss values for all epochs.
+
+**Q38. What does `[-1]` mean in Python?**
+
+It selects the last element of a list.
+
+**Q39. What does `figsize=(12,4)` mean?**
+
+It defines the graph size as 12 inches wide and 4 inches high.
+
+**Q40. What does `tight_layout()` do?**
+
+It adjusts the spacing between graphs to avoid overlapping.
+
+---
+
+# 8. Important Difference Between Practical 1 and Practical 2
+
+This is important because the external might ask you to explain the difference.
+
+| Practical 1 | Practical 2 |
+|---|---|
+| Focuses on test accuracy. | Focuses on training and testing accuracy and graphs. |
+| Uses `model.fit()` directly. | Stores the result in `history`. |
+| Does not use validation data. | Uses `validation_split=0.1`. |
+| Does not display accuracy/loss graphs. | Displays accuracy and loss graphs. |
+| Displays test accuracy. | Displays training and testing accuracy. |
+| Does not require Matplotlib. | Uses Matplotlib. |
+
+**Common code in both practicals:**
+- Dataset loading
+- Normalization
+- Label encoding
+- Flattening
+- FNN architecture
+- Model compilation
+
+---
+
+# 9. Quick Revision – Practical 2
+
+| Step | Important Code | Purpose |
+|---|---|---|
+| 1 | `import matplotlib.pyplot as plt` | Import graph library |
+| 2 | `pd.read_csv()` | Load dataset |
+| 3 | `/255.0` | Normalize pixels |
+| 4 | `LabelEncoder()` | Encode labels |
+| 5 | `reshape()` | Flatten images |
+| 6 | `Sequential()` | Create neural network |
+| 7 | `Dense()` | Create fully connected layers |
+| 8 | `compile()` | Configure model |
+| 9 | `validation_split=0.1` | Reserve 10% for validation |
+| 10 | `model.fit()` | Train model |
+| 11 | `history.history` | Access training information |
+| 12 | `model.evaluate()` | Evaluate testing data |
+| 13 | `plt.plot()` | Draw graphs |
+| 14 | `plt.show()` | Display graphs |
+
+### Important Values to Remember
+
+| Parameter | Value |
+|---|---|
+| Image size | 28 × 28 |
+| Input features | 784 |
+| Classes | 24 |
+| Hidden Layer 1 | 256 neurons |
+| Hidden Layer 2 | 128 neurons |
+| Output Layer | 24 neurons |
+| Activation | ReLU, Softmax |
+| Optimizer | Adam |
+| Loss | Sparse Categorical Crossentropy |
+| Epochs | 15 |
+| Batch Size | 128 |
+| Validation Split | 0.1 (10%) |
+| Training Accuracy | 99.47% |
+| Testing Accuracy | 75.96% |
+
+---
+
+# 10. Important Observation About Your Output
+
+There is one thing you should understand before your external viva.
+
+Your output shows:
+
+- Training accuracy: 99.47%
+- Validation accuracy in the graph: approximately 99%.
+- Testing accuracy: 75.96%.
+
+The large difference between validation and testing accuracy is unusual.
+
+It suggests that the model may be overfitting or that the validation and testing datasets have different characteristics.
+
+**If the external asks: Why is testing accuracy lower than training accuracy?**
+
+Answer:
+
+"The model has learned the training data very well, but it performs less accurately on unseen testing data. This may indicate overfitting or differences between the training and testing datasets."
+
+Also remember: Your accuracy graph displays **training and validation accuracy, not testing accuracy**. Testing accuracy is calculated separately using `model.evaluate()` and printed as 75.96%.
+
+---
+
+## Final 2-Minute Explanation for External
+
+If the external asks you to explain the complete practical, you can say:
+
+"We have implemented a Feedforward Neural Network using TensorFlow and Keras for Sign Language Alphabet Recognition.
+
+First, we imported the required libraries and loaded the Sign Language MNIST training and testing datasets.
+
+Then, we normalized the pixel values by dividing them by 255 and encoded the labels using LabelEncoder.
+
+After that, we flattened the 28 × 28 images into 784 features.
+
+We created a Sequential Neural Network containing two hidden Dense layers with 256 and 128 neurons, using ReLU activation, and an output layer with 24 neurons using Softmax activation.
+
+We compiled the model using Adam optimizer and Sparse Categorical Crossentropy loss function.
+
+We trained the model for 15 epochs with batch size 128 and validation split 0.1.
+
+Finally, we calculated training and testing accuracy and used Matplotlib to display accuracy and loss graphs.
+
+The training accuracy obtained was 99.47%, and testing accuracy was 75.96%."
+
+**Practical 2 is covered.** The most important new concepts to prepare for this practical are `validation_split`, `history.history`, `train_accuracy`, `plt.subplot()`, `plt.plot()` and the difference between training, validation and testing data.

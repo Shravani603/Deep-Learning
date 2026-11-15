@@ -1,0 +1,380 @@
+# Chit 9: Sign Language CNN: actual and predicted labels
+
+9. Develop a CNN-based classification model using the Sign Language MNIST dataset. Predict alphabet labels for test images and display the actual and predicted alphabet for any five test samples. 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Reshape the images
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+
+
+
+# Step 7: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+
+# Step 8: Show five examples
+plt.figure(figsize=(14, 4))
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+    if image_shape[-1] == 1:
+        plt.imshow(image.squeeze(), cmap="gray")
+    else:
+        plt.imshow(image)
+    plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+    plt.axis("off")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 9: Sign Language CNN — Actual and Predicted Labels
+
+## Aim
+
+Train a CNN to recognize Sign Language MNIST images, predict labels for the test images, and display the actual and predicted letters for five samples.
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+- `pandas as pd` loads the CSV files.
+- `LabelEncoder` converts labels to numbers.
+- `Sequential` creates a model from layers arranged in order.
+- `Input` defines the shape of each image.
+- `Conv2D`, `MaxPooling2D`, and `Flatten` build the CNN.
+- `Dense` creates fully connected layers.
+- `numpy as np` is used later to select the predicted class with the highest probability.
+- `matplotlib.pyplot as plt` displays the five images and their labels.
+- `tensorflow as tf` is imported but not directly used in this code.
+
+## Step 2: Load and prepare the data
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+- `pd.read_csv(...)` reads a CSV file into a table.
+- `train_df` holds the data used to train the model.
+- `test_df` holds the separate data used for predictions and evaluation.
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+- `X_train` and `X_test` contain the image pixels; `X` represents inputs.
+- `.drop(columns="label")` removes the answer column, leaving the pixels.
+- `.to_numpy(dtype="float32")` converts the pixel data into decimal numbers.
+- `/ 255.0` scales pixel values from 0–255 to 0–1. This is called **normalization**.
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+```
+
+- `encoder = LabelEncoder()` creates a label converter.
+- `fit_transform(...)` learns the label mapping from training labels and converts them to consecutive numbers.
+- `transform(...)` uses the same mapping for test labels.
+- `y_train` and `y_test` contain the correct class numbers for the images.
+- `class_names` converts original label numbers into letters. For example, `65` is the character code for `"A"`.
+- `image_shape = (28, 28, 1)` means height 28, width 28, and one grayscale channel.
+
+The dataset has 24 classes. The signs for J and Z are omitted because they involve motion.
+
+## Step 3: Reshape the images
+
+```python
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+```
+
+CNNs expect images to have height, width, and channel dimensions.
+
+- `28, 28` is the image size.
+- `1` indicates grayscale.
+- `-1` lets Python calculate the number of images automatically.
+
+Each dataset now has this shape:
+
+```text
+(number of images, 28, 28, 1)
+```
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the different letters: 24.
+- `Input(shape=X_train.shape[1:])` sets each input to `(28, 28, 1)`. It leaves out the number-of-images dimension.
+- `Conv2D(32, (3, 3), ...)` learns 32 filters, each scanning a 3 × 3 part of the image.
+- `MaxPooling2D((2, 2))` reduces the feature-map size by selecting the largest value in each 2 × 2 area.
+- The second `Conv2D` learns 64 filters for more complex patterns.
+- The second pooling layer reduces the maps again.
+- `Flatten()` converts the feature maps into a one-dimensional list.
+- `Dense(128, ...)` combines the learned features using 128 neurons.
+- `Dense(num_classes, ...)` produces one output for each of the 24 classes.
+- `activation="relu"` sets negative values to zero and keeps positive values.
+- `activation="softmax"` turns the output scores into class probabilities.
+
+## Step 5: Compile and train
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights.
+- `loss="sparse_categorical_crossentropy"` measures the difference between predictions and integer class labels.
+- `metrics=["accuracy"]` asks Keras to report the fraction of correct predictions.
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the CNN.
+- `epochs=10` means it goes through the training data 10 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides the training progress messages.
+
+## Step 6: Predict test images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+- `model.predict(X_test, ...)` gets the model’s probability scores for each test image.
+- `np.argmax(..., axis=1)` finds the position of the largest probability for each image.
+- `y_pred` stores the predicted class numbers.
+- `axis=1` means “find the highest score across the class outputs for each image.”
+
+## Step 7: Display five examples
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a figure 14 inches wide and 4 inches high.
+
+```python
+for i in range(5):
+```
+
+Repeats the indented instructions five times, with `i` taking the values 0, 1, 2, 3, and 4.
+
+```python
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+```
+
+- `X_test[i]` selects one test image.
+- `.reshape(image_shape)` gives it the shape `(28, 28, 1)`.
+- `plt.subplot(1, 5, i + 1)` divides the figure into one row with five positions and selects the current position. `i + 1` is used because subplot positions start at 1.
+
+```python
+    if image_shape[-1] == 1:
+        plt.imshow(image.squeeze(), cmap="gray")
+    else:
+        plt.imshow(image)
+```
+
+- `image_shape[-1]` checks the last shape value, the number of channels.
+- `if ... == 1` checks whether the image is grayscale.
+- `.squeeze()` removes the unnecessary one-channel dimension so the image can be displayed as a 2D array.
+- `cmap="gray"` displays the image in grayscale.
+- `else` handles a non-grayscale image.
+
+```python
+    plt.title(
+        f"Actual: {class_names[int(y_test[i])]}
+Predicted: {class_names[int(y_pred[i])]}"
+    )
+    plt.axis("off")
+```
+
+- `plt.title(...)` puts text above the image.
+- `y_test[i]` is the correct class number; `y_pred[i]` is the predicted class number.
+- `class_names[...]` converts each number into its alphabet letter.
+- `int(...)` ensures the index is an integer.
+- `\n` starts the predicted label on a new line.
+- `plt.axis("off")` hides the image’s coordinate axes.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `plt.tight_layout()` adjusts spacing so the images and titles fit.
+- `plt.show()` displays the figure.
+
+## How to interpret your output
+
+The image shows five test samples. For each one, the title gives the correct letter and the model’s predicted letter:
+
+| Sample | Actual | Predicted | Result |
+|---|---:|---:|---|
+| 1 | G | G | Correct |
+| 2 | F | F | Correct |
+| 3 | K | K | Correct |
+| 4 | A | A | Correct |
+| 5 | D | D | Correct |
+
+All five displayed predictions are correct. This does not mean every test image is correct; the program displays only the first five.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| `model.predict()` | Produces class probability scores for input images |
+| `np.argmax()` | Selects the position of the largest score |
+| `y_test` | Correct labels for test images |
+| `y_pred` | Labels predicted by the model |
+| `class_names` | Maps class positions to alphabet letters |
+| `plt.subplot()` | Places several images in one figure |
+
+## One-minute explanation for the external examiner
+
+> This practical trains a CNN to recognize Sign Language MNIST images. The CSV data is loaded, the pixel values are normalized, and each image is reshaped to 28 by 28 pixels with one grayscale channel. A CNN with convolution and max-pooling layers learns image features, and Dense layers classify them into 24 classes. The model predicts class scores for the test images. `argmax` selects the class with the highest score, and `class_names` converts the actual and predicted class numbers into letters. Finally, the program displays five test images with both labels.
+
+## Likely viva questions and answers
+
+1. **What is the purpose of this practical?**  
+   To train a CNN and display actual and predicted letters for five test images.
+
+2. **What does `model.predict()` return?**  
+   A set of probability scores for each class, for every image supplied.
+
+3. **Why do we use `np.argmax()`?**  
+   To select the class position with the highest probability score.
+
+4. **What is the difference between `y_test` and `y_pred`?**  
+   `y_test` contains the correct labels; `y_pred` contains the model’s predictions.
+
+5. **Why use `class_names`?**  
+   It converts numeric class positions into alphabet letters for display.
+
+6. **What does `for i in range(5)` do?**  
+   It repeats the display steps for five test images.
+
+7. **Why does `plt.subplot(1, 5, i + 1)` use `i + 1`?**  
+   Matplotlib subplot positions start at 1, while the loop starts at 0.
+
+8. **Why use `.squeeze()` before `plt.imshow()`?**  
+   It removes the extra one-channel dimension from a grayscale image.
+
+9. **What does `cmap="gray"` do?**  
+   It displays the image using shades of gray.
+
+10. **How do you know whether a displayed prediction is correct?**  
+    Compare the “Actual” and “Predicted” letters. They match when the prediction is correct.
+
+11. **Does this output prove that the model classifies the entire test set correctly?**  
+    No. It shows only five samples. A full test evaluation is needed to measure performance across the test set.
+
+12. **Why are J and Z missing from the 24 classes?**  
+    Their American Sign Language gestures involve movement, which static images do not capture well.

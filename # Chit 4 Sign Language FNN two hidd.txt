@@ -1,0 +1,1268 @@
+# Chit 4: Sign Language FNN: two hidden layers and sample predictions
+
+4. Implement a Feedforward Neural Network for Sign Language recognition using two hidden Dense layers. Train the model and display its accuracy and loss. Also, observe the model's performance on sample test images. 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+# Step 7: Evaluate on test data
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+print(f"Testing loss: {test_loss:.4f}")
+
+# Display training accuracy
+train_accuracy = history.history["accuracy"][-1]
+print("Training Accuracy:", train_accuracy * 100, "%")
+
+
+# Step 8: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+# Step 9: Show five examples
+plt.figure(figsize=(14, 4))
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+    if image_shape[-1] == 1:
+        plt.imshow(image.squeeze(), cmap="gray")
+    else:
+        plt.imshow(image)
+    plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+    plt.axis("off")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 4: Feedforward Neural Network for Sign Language Recognition – Two Hidden Layers and Sample Predictions
+
+**Subject:** Deep Learning  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+## 1. Aim of the Practical
+
+To implement a Feedforward Neural Network (FNN) for Sign Language Recognition using two hidden Dense layers, train the model, display its accuracy and loss, and observe its performance on sample testing images.
+
+---
+
+# 2. Understanding the Practical
+
+In this practical, we use a Feedforward Neural Network to recognize American Sign Language alphabet gestures.
+
+The program performs the following operations:
+
+1. Import required libraries.
+2. Load Sign Language MNIST dataset.
+3. Normalize pixel values.
+4. Encode the alphabet labels.
+5. Flatten images into 784 features.
+6. Create an FNN with two hidden Dense layers.
+7. Compile and train the model.
+8. Calculate testing accuracy and testing loss.
+9. Predict alphabet classes for testing images.
+10. Display five images with actual and predicted labels.
+
+### Expected Output
+
+Your output:
+
+```text
+Testing accuracy: 75.42%
+Testing loss: 1.1422
+```
+
+The image output is the same format as Practical 3, displaying five images with their actual and predicted alphabet labels.
+
+---
+
+# 3. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical calculations and array operations. |
+| `import tensorflow as tf` | Imports TensorFlow for Deep Learning. |
+| `Sequential` | Used to create a neural network layer by layer. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `import pandas as pd` | Imports Pandas to read CSV datasets. |
+| `LabelEncoder` | Converts labels into numerical class indices. |
+| `matplotlib.pyplot as plt` | Used to display images and graphs. |
+
+### Important Viva Questions
+
+**Q1. Why do we use TensorFlow?**
+
+To build, train and evaluate Deep Learning models.
+
+**Q2. Why do we use Pandas?**
+
+To load and handle CSV datasets.
+
+**Q3. Why do we use Matplotlib?**
+
+To display images and graphs.
+
+**Q4. What is NumPy?**
+
+NumPy is a Python library used for numerical calculations and array operations.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**Explanation:**
+
+- `pd.read_csv()` reads CSV files.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+We load two datasets:
+
+1. Training dataset – Used to train the model.
+2. Testing dataset – Used to evaluate the trained model.
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+These lines perform three operations.
+
+**1. `drop(columns="label")`**
+
+Removes the label column from the dataset.
+
+**2. `to_numpy(dtype="float32")`**
+
+Converts the dataset into NumPy arrays with float32 data type.
+
+**3. `/ 255.0`**
+
+Normalizes pixel values between 0 and 1.
+
+Example:
+
+| Original Pixel | Normalized Pixel |
+|---:|---:|
+| 0 | 0.0 |
+| 128 | 0.50 |
+| 255 | 1.0 |
+
+**Why do we normalize?**
+
+To keep pixel values within a smaller range and help the neural network learn efficiently.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+**Line 1:**
+
+Creates an object of LabelEncoder.
+
+**Line 2:**
+
+`fit_transform()` learns the unique classes and converts them into numerical indices.
+
+**Line 3:**
+
+`transform()` converts testing labels using the same mapping learned from training data.
+
+**Why do we use LabelEncoder?**
+
+To convert alphabet class labels into numerical values.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+```
+
+**First line:**
+
+Converts numerical class labels into alphabet characters.
+
+- `encoder.classes_` – Returns the original unique classes.
+- `int(label)` – Converts the label into an integer.
+- `+65` – Adds 65 to get the ASCII value.
+- `chr()` – Converts ASCII value into a character.
+
+Example:
+
+| Numerical Label | Alphabet |
+|---:|---|
+| 0 | A |
+| 1 | B |
+| 2 | C |
+| 3 | D |
+
+**Second line:**
+
+Defines the image dimensions.
+
+- 28 = Height.
+- 28 = Width.
+- 1 = Grayscale channel.
+
+---
+
+## Step 3: Flatten the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+### What is Flattening?
+
+Flattening means converting a two-dimensional image into a one-dimensional array.
+
+Original image:
+
+```text
+28 × 28 pixels
+```
+
+After flattening:
+
+```text
+784 features
+```
+
+Because:
+
+28 × 28 = 784.
+
+### Understanding `reshape()`
+
+- `reshape()` changes the dimensions of an array.
+- `-1` automatically calculates the number of images.
+- `28, 28` represents image height and width.
+- `784` represents the total number of pixels.
+
+**Why do we flatten images?**
+
+Because Dense layers expect one-dimensional feature vectors for each input image.
+
+---
+
+## Step 4: Build the Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates our Feedforward Neural Network.
+
+### 1. `num_classes = len(class_names)`
+
+- `len()` counts the number of elements.
+- `num_classes` stores the total number of alphabet classes.
+
+Here:
+
+```text
+num_classes = 24
+```
+
+### 2. `model = Sequential([...])`
+
+Creates a Sequential Neural Network in which layers are arranged one after another.
+
+### Understanding the Layers
+
+| Layer | Neurons | Activation |
+|---|---:|---|
+| Input Layer | 784 | None |
+| Hidden Layer 1 | 256 | ReLU |
+| Hidden Layer 2 | 128 | ReLU |
+| Output Layer | 24 | Softmax |
+
+**Input Layer:**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+Accepts 784 input features.
+
+**First Hidden Layer:**
+
+```python
+Dense(256, activation="relu")
+```
+
+Creates a fully connected layer with 256 neurons using ReLU activation.
+
+**Second Hidden Layer:**
+
+```python
+Dense(128, activation="relu")
+```
+
+Creates another fully connected layer with 128 neurons using ReLU activation.
+
+**Output Layer:**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+Creates 24 output neurons.
+
+Softmax converts output values into probabilities and helps the model select the most likely alphabet class.
+
+### Neural Network Architecture
+
+```text
+          INPUT LAYER
+          784 Neurons
+               |
+               |
+       HIDDEN LAYER 1
+          256 Neurons
+             ReLU
+               |
+               |
+       HIDDEN LAYER 2
+          128 Neurons
+             ReLU
+               |
+               |
+         OUTPUT LAYER
+          24 Neurons
+            Softmax
+               |
+               |
+       Predicted Alphabet
+```
+
+---
+
+## Step 5: Compile the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation prepares the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+### Important Viva Questions
+
+**Q1. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q2. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+**Q3. Which activation functions are used?**
+
+ReLU for hidden layers and Softmax for the output layer.
+
+---
+
+## Step 6: Train the Model
+
+### Code
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This line trains the neural network.
+
+| Parameter | Explanation |
+|---|---|
+| `model.fit()` | Trains the neural network. |
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=15` | Trains the model for 15 epochs. |
+| `batch_size=128` | Processes 128 images together before updating weights. |
+| `verbose=0` | Hides training progress. |
+
+### What happens during training?
+
+1. Training images are given to the model.
+2. The model predicts the output.
+3. Predicted output is compared with actual labels.
+4. Loss is calculated.
+5. Adam optimizer updates the weights.
+6. This process repeats for 15 epochs.
+
+---
+
+# 4. Step 7: Evaluate the Model on Test Data
+
+**This is an important new part of Practical 4.**
+
+### Code
+
+```python
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This line evaluates the trained model using testing data.
+
+Let's understand each part.
+
+- `model.evaluate()` – Evaluates model performance.
+- `X_test` – Contains testing images.
+- `y_test` – Contains actual testing labels.
+- `verbose=0` – Hides evaluation progress.
+
+### What does `model.evaluate()` return?
+
+It returns two values:
+
+1. Loss.
+2. Accuracy.
+
+Therefore:
+
+```python
+test_loss, test_accuracy
+```
+
+stores both values separately.
+
+**What is test_loss?**
+
+It measures how much error the model makes while predicting testing images.
+
+**What is test_accuracy?**
+
+It measures the percentage of correctly classified testing images.
+
+### Next Code
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+Displays testing accuracy.
+
+- `print()` – Displays output.
+- `f` – Creates an f-string.
+- `test_accuracy * 100` – Converts decimal accuracy into percentage.
+- `:.2f` – Displays two decimal places.
+
+### Next Code
+
+```python
+print(f"Testing loss: {test_loss:.4f}")
+```
+
+Displays testing loss.
+
+- `test_loss` – Stores the calculated testing loss.
+- `:.4f` – Displays four digits after the decimal point.
+
+### Your Output
+
+```text
+Testing accuracy: 75.42%
+Testing loss: 1.1422
+```
+
+### Understanding the Output
+
+**Testing Accuracy = 75.42%**
+
+The model correctly classifies approximately 75.42% of the testing images.
+
+**Testing Loss = 1.1422**
+
+The loss function measures the prediction error of the model on testing data.
+
+Generally:
+- Lower loss indicates better predictions.
+- Higher loss indicates greater prediction errors.
+
+### Important Viva Question
+
+**Q. What is the difference between accuracy and loss?**
+
+- Accuracy measures how many predictions are correct.
+- Loss measures how incorrect the predictions are.
+
+---
+
+# 5. Important Code Issue – Training Accuracy
+
+Your code contains:
+
+```python
+# Display training accuracy
+train_accuracy = history.history["accuracy"][-1]
+print("Training Accuracy:", train_accuracy * 100, "%")
+```
+
+There is a small mistake here.
+
+You have written:
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+But you have not stored the training history in a variable.
+
+Later, you are trying to access:
+
+```python
+history.history["accuracy"]
+```
+
+However, `history` has not been defined in this code.
+
+### What is the correct code?
+
+Replace:
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+With:
+
+```python
+history = model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+Now the training accuracy code will work:
+
+```python
+train_accuracy = history.history["accuracy"][-1]
+print("Training Accuracy:", train_accuracy * 100, "%")
+```
+
+### Why do we use `history`?
+
+`model.fit()` returns a History object containing information about training.
+
+It stores:
+- Training accuracy.
+- Training loss.
+- Validation accuracy, if validation is used.
+- Validation loss, if validation is used.
+
+**Important:** If you executed Practical 2 before Practical 4 in the same Jupyter Notebook, an old `history` variable might still exist. In that case, your code might display the previous practical's training accuracy instead of Practical 4's accuracy.
+
+Always assign the current training result to `history`.
+
+---
+
+# 6. Step 8: Predict Test Images
+
+### Code
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This line predicts alphabet classes for all testing images.
+
+Let's understand it.
+
+### 1. `model.predict(X_test, verbose=0)`
+
+- `model.predict()` – Makes predictions using the trained model.
+- `X_test` – Contains testing images.
+- `verbose=0` – Hides prediction progress.
+
+It returns probabilities for all 24 classes for every testing image.
+
+Example:
+
+| Alphabet | Probability |
+|---|---:|
+| A | 0.10 |
+| B | 0.20 |
+| C | 0.60 |
+| D | 0.10 |
+
+Here, C has the highest probability.
+
+### 2. `np.argmax()`
+
+Returns the index of the highest value.
+
+Example:
+
+```python
+probabilities = [0.10, 0.20, 0.60, 0.10]
+
+np.argmax(probabilities)
+```
+
+Output:
+
+```text
+2
+```
+
+Because 0.60 is at index 2.
+
+### 3. `axis=1`
+
+Finds the highest probability separately for each image.
+
+### 4. `y_pred`
+
+Stores the predicted numerical class indices.
+
+**Complete meaning:**
+
+The trained model predicts probabilities for testing images, and `np.argmax()` selects the class with the highest probability for each image.
+
+---
+
+# 7. Step 9: Display Five Sample Images
+
+**This section is almost exactly the same as Practical 3.**
+
+### Code
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a new figure of size 14 × 4 inches.
+
+### Next Code
+
+```python
+for i in range(5):
+```
+
+- `for` – Creates a loop.
+- `range(5)` – Generates values 0, 1, 2, 3, 4.
+
+The loop executes five times to display five images.
+
+### Next Code
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+- `X_test[i]` – Selects the current testing image.
+- `reshape()` – Changes its dimensions.
+- `image_shape` – Represents (28, 28, 1).
+
+It converts the flattened image back into its original dimensions.
+
+### Next Code
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+Creates one row and five columns for displaying images.
+
+- 1 = Number of rows.
+- 5 = Number of columns.
+- `i+1` = Current image position.
+
+Why `i+1`?
+
+Because Python indexing starts from 0, but subplot positions start from 1.
+
+### Next Code
+
+```python
+if image_shape[-1] == 1:
+    plt.imshow(image.squeeze(), cmap="gray")
+else:
+    plt.imshow(image)
+```
+
+This code displays the image.
+
+**`image_shape[-1] == 1`**
+
+Checks whether the image has one channel.
+
+Since our images are grayscale, the condition is true.
+
+**`plt.imshow()`**
+
+Displays the image.
+
+**`image.squeeze()`**
+
+Removes dimensions of size 1.
+
+Before squeeze:
+
+```text
+(28, 28, 1)
+```
+
+After squeeze:
+
+```text
+(28, 28)
+```
+
+**`cmap="gray"`**
+
+Displays the image in grayscale.
+
+**`else`**
+
+If the image has more than one channel, it displays the image normally.
+
+### Next Code
+
+```python
+plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+```
+
+Displays the actual and predicted alphabet labels above each image.
+
+- `plt.title()` – Displays the image title.
+- `y_test[i]` – Gets the actual label.
+- `y_pred[i]` – Gets the predicted label.
+- `int()` – Converts the value into an integer.
+- `class_names[]` – Converts numerical indices into alphabet characters.
+- `\n` – Moves the predicted label to the next line.
+
+Example:
+
+```text
+Actual: G
+Predicted: G
+```
+
+### Next Code
+
+```python
+plt.axis("off")
+```
+
+Hides X-axis and Y-axis values around the image.
+
+### Final Lines
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+**`plt.tight_layout()`**
+
+Adjusts spacing between images to avoid overlapping.
+
+**`plt.show()`**
+
+Displays all five images with their actual and predicted labels.
+
+---
+
+# 8. Output Explanation
+
+Your output is the same format as Practical 3.
+
+It displays five grayscale hand gesture images with their actual and predicted alphabet labels.
+
+| Image | Actual | Predicted | Result |
+|---|---|---|---|
+| 1 | G | G | Correct |
+| 2 | F | F | Correct |
+| 3 | K | K | Correct |
+| 4 | A | A | Correct |
+| 5 | D | D | Correct |
+
+### What does Actual mean?
+
+Actual represents the correct alphabet label from the testing dataset.
+
+### What does Predicted mean?
+
+Predicted represents the alphabet identified by the trained neural network.
+
+### How do we identify a correct prediction?
+
+If:
+
+```text
+Actual = Predicted
+```
+
+The prediction is correct.
+
+If:
+
+```text
+Actual ≠ Predicted
+```
+
+The prediction is incorrect.
+
+**Important:** All five displayed predictions are correct, but the overall testing accuracy is 75.42%. These five images are only sample predictions, not the complete testing dataset.
+
+### Conclusion
+
+The Feedforward Neural Network successfully classifies grayscale American Sign Language hand gestures into alphabet classes. The model achieves 75.42% testing accuracy and displays sample images with their actual and predicted labels.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+# 9. Important External Viva Questions and Answers
+
+## A. Basic Practical Questions
+
+**Q1. What is the aim of this practical?**
+
+To implement an FNN with two hidden Dense layers for Sign Language Recognition and display accuracy, loss and sample predictions.
+
+**Q2. Which dataset is used?**
+
+Sign Language MNIST dataset.
+
+**Q3. What is the size of each image?**
+
+28 × 28 pixels.
+
+**Q4. How many classes are present?**
+
+24 classes.
+
+**Q5. How many hidden layers are used?**
+
+Two hidden layers.
+
+**Q6. How many neurons are present in the hidden layers?**
+
+256 and 128 neurons.
+
+**Q7. Which activation functions are used?**
+
+ReLU and Softmax.
+
+**Q8. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q9. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+**Q10. How many epochs are used?**
+
+15 epochs.
+
+## B. Accuracy and Loss Questions
+
+**Q11. What is accuracy?**
+
+Accuracy is the percentage of correctly predicted samples.
+
+**Q12. What is loss?**
+
+Loss measures the difference between actual and predicted outputs.
+
+**Q13. What is the testing accuracy in your practical?**
+
+75.42%.
+
+**Q14. What is the testing loss?**
+
+1.1422.
+
+**Q15. Which function is used to calculate testing accuracy and loss?**
+
+`model.evaluate()`.
+
+**Q16. What does `model.evaluate()` return?**
+
+It returns the loss and accuracy of the model.
+
+**Q17. What is the difference between training and testing accuracy?**
+
+Training accuracy measures performance on training data, while testing accuracy measures performance on unseen testing data.
+
+## C. Prediction Questions
+
+**Q18. Which function is used to predict alphabet classes?**
+
+`model.predict()`.
+
+**Q19. What is np.argmax()?**
+
+It returns the index of the maximum value.
+
+**Q20. Why do we use axis=1?**
+
+To find the highest probability separately for each testing image.
+
+**Q21. What is y_pred?**
+
+It stores the predicted class indices.
+
+**Q22. What is y_test?**
+
+It stores the actual testing labels.
+
+**Q23. What is the difference between y_test and y_pred?**
+
+`y_test` contains actual labels, whereas `y_pred` contains predicted labels.
+
+## D. Image Display Questions
+
+**Q24. Which library is used to display images?**
+
+Matplotlib.
+
+**Q25. What is plt.imshow()?**
+
+It displays images.
+
+**Q26. What is plt.subplot()?**
+
+It divides a figure into multiple sections.
+
+**Q27. Why do we use range(5)?**
+
+To display five testing images.
+
+**Q28. What is image.squeeze()?**
+
+It removes dimensions of size 1 from an array.
+
+**Q29. What is cmap="gray"?**
+
+It displays the image in grayscale.
+
+**Q30. What is plt.axis("off")?**
+
+It hides the X-axis and Y-axis.
+
+## E. Important Conceptual Questions
+
+**Q31. What is a Feedforward Neural Network?**
+
+It is a neural network in which information flows in one direction, from input to output.
+
+**Q32. What is a Dense layer?**
+
+A fully connected layer in which every neuron connects to all neurons in the previous layer.
+
+**Q33. What is ReLU?**
+
+ReLU is an activation function that converts negative values into zero and keeps positive values unchanged.
+
+**Q34. What is Softmax?**
+
+Softmax converts output values into probabilities for multi-class classification.
+
+**Q35. What is an epoch?**
+
+One complete pass through the entire training dataset.
+
+**Q36. What is batch size?**
+
+The number of samples processed together before updating model weights.
+
+**Q37. What is overfitting?**
+
+When a model performs very well on training data but poorly on unseen data.
+
+---
+
+# 10. Important Difference Between Practical 1, 2, 3 and 4
+
+These four practicals use almost the same dataset, preprocessing and FNN architecture.
+
+Their main objectives are different.
+
+| Practical | Main Objective | Important Functions |
+|---|---|---|
+| Practical 1 | Display testing accuracy. | `model.evaluate()` |
+| Practical 2 | Display training/testing accuracy and accuracy/loss graphs. | `history.history`, `plt.plot()` |
+| Practical 3 | Display five images with actual and predicted labels. | `model.predict()`, `np.argmax()` |
+| Practical 4 | Display testing accuracy, testing loss and sample predictions using two hidden layers. | `model.evaluate()`, `model.predict()` |
+
+### Important Differences in Code
+
+**Practical 1:**
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+Only testing accuracy is stored.
+
+**Practical 2:**
+
+```python
+history = model.fit(...)
+```
+
+Training history is stored to display training and validation accuracy/loss graphs.
+
+**Practical 3:**
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+Predictions are generated for testing images.
+
+**Practical 4:**
+
+```python
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+Both testing loss and testing accuracy are stored.
+
+It also displays sample predictions, just like Practical 3.
+
+---
+
+# 11. Quick Revision – Practical 4
+
+| Step | Important Code | Purpose |
+|---|---|---|
+| 1 | `import numpy as np` | Numerical operations |
+| 2 | `pd.read_csv()` | Load dataset |
+| 3 | `/255.0` | Normalize images |
+| 4 | `LabelEncoder()` | Encode labels |
+| 5 | `reshape()` | Flatten images |
+| 6 | `Sequential()` | Create neural network |
+| 7 | `Dense()` | Create fully connected layers |
+| 8 | `model.compile()` | Compile model |
+| 9 | `model.fit()` | Train model |
+| 10 | `model.evaluate()` | Calculate testing loss and accuracy |
+| 11 | `model.predict()` | Predict testing images |
+| 12 | `np.argmax()` | Find highest probability class |
+| 13 | `plt.imshow()` | Display images |
+| 14 | `plt.title()` | Display actual and predicted labels |
+| 15 | `plt.show()` | Display final output |
+
+### Important Values to Remember
+
+| Parameter | Value |
+|---|---|
+| Dataset | Sign Language MNIST |
+| Image size | 28 × 28 |
+| Input features | 784 |
+| Number of classes | 24 |
+| Hidden Layer 1 | 256 neurons |
+| Hidden Layer 2 | 128 neurons |
+| Output Layer | 24 neurons |
+| Activation | ReLU and Softmax |
+| Optimizer | Adam |
+| Loss Function | Sparse Categorical Crossentropy |
+| Epochs | 15 |
+| Batch Size | 128 |
+| Testing Accuracy | 75.42% |
+| Testing Loss | 1.1422 |
+| Sample Images | 5 |
+
+---
+
+## 12. Most Important Questions for External
+
+Prepare these especially well:
+
+1. What is a Feedforward Neural Network?
+2. Why do we use two hidden Dense layers?
+3. What is the purpose of ReLU?
+4. Why do we use Softmax in the output layer?
+5. What is the difference between accuracy and loss?
+6. What does `model.evaluate()` return?
+7. What is the purpose of `model.predict()`?
+8. What is `np.argmax()`?
+9. Why do we use `axis=1`?
+10. What is the difference between actual and predicted labels?
+11. What is `image.squeeze()`?
+12. Why do we use `plt.imshow()`?
+
+### 1-Minute Explanation for External
+
+"We have implemented a Feedforward Neural Network for American Sign Language Recognition using the Sign Language MNIST dataset.
+
+First, we loaded the training and testing datasets and performed preprocessing by normalizing pixel values, encoding labels and flattening images.
+
+Then, we created a Sequential Neural Network with two hidden Dense layers containing 256 and 128 neurons and an output layer containing 24 neurons.
+
+We used ReLU activation in hidden layers and Softmax in the output layer.
+
+We compiled the model using Adam optimizer and Sparse Categorical Crossentropy loss function.
+
+After training for 15 epochs, we evaluated the model using testing data and obtained 75.42% testing accuracy and 1.1422 testing loss.
+
+Finally, we used model.predict() and NumPy argmax() to predict alphabet classes and Matplotlib to display five testing images with their actual and predicted labels."
+
+---
+
+### Important Correction Before Your Practical Exam
+
+In Step 6, change:
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+to:
+
+```python
+history = model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+Otherwise, your `history.history["accuracy"][-1]` line will produce an error if `history` has not already been defined.
+
+**Practical 4 preparation complete!**

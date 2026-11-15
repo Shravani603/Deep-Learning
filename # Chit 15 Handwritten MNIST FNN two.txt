@@ -1,0 +1,331 @@
+# Chit 15: Handwritten MNIST FNN: two hidden layers
+
+15. Implement a Feedforward Neural Network using two hidden Dense layers to classify handwritten digits. Observe the effect of hidden layers on model performance. Use Dataset -- Handwritten MNIST 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+
+
+# Step 2: Load and prepare Handwritten MNIST
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 15: Handwritten MNIST FNN — Two Hidden Layers
+
+## Aim
+
+Build a Feedforward Neural Network (FNN) with **two hidden Dense layers** to classify handwritten digits from 0 to 9. Then measure its accuracy on test images.
+
+## How the model works
+
+```text
+28 × 28 digit image → flatten to 784 values → Dense(256) → Dense(128) → Softmax(10 digits)
+```
+
+The two hidden layers learn patterns from the image pixels. The final layer chooses one of the ten digit classes.
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+- `numpy as np` imports NumPy. It is not directly used later in this code.
+- `tensorflow as tf` imports TensorFlow. `tf` is also not directly used later.
+- `Sequential` creates a model with layers arranged in order.
+- `Input` defines the shape of each input example.
+- `Dense` creates a fully connected neural network layer.
+
+## Step 2: Load and prepare Handwritten MNIST
+
+```python
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+```
+
+- `mnist` is the handwritten digit dataset provided by Keras.
+- `load_data()` loads the images and their correct labels.
+- `X_train` and `y_train` contain the training images and labels.
+- `X_test` and `y_test` contain separate test images and labels.
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `.astype("float32")` converts pixel values to decimal numbers.
+- `/ 255.0` scales pixels from 0–255 to 0–1. This is called **normalization**.
+
+```python
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+```
+
+- `range(10)` produces numbers 0 through 9.
+- `str(i)` converts each number to text.
+- `class_names` becomes `["0", "1", ..., "9"]`. It is not used later in this code.
+- `image_shape` describes a 28 × 28 grayscale image with one channel. It is also not used later.
+
+## Step 3: Flatten the images
+
+```python
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+```
+
+- `len(X_train)` and `len(X_test)` give the number of images in each set.
+- `784` is the number of pixels in each 28 × 28 image: `28 × 28 = 784`.
+- `.reshape(...)` turns each two-dimensional image into a one-dimensional list of pixel values.
+- This is called **flattening**. A Dense layer expects each image as a vector.
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the digit classes: 10.
+- `Sequential([...])` arranges the layers in order.
+- `Input(shape=(X_train.shape[1],))` tells the model that each image has 784 input values.
+- `Dense(256, activation="relu")` is the **first hidden layer**, with 256 neurons.
+- `Dense(128, activation="relu")` is the **second hidden layer**, with 128 neurons.
+- `activation="relu"` changes negative values to zero and keeps positive values. It allows the model to learn patterns.
+- `Dense(num_classes, ...)` creates 10 output neurons, one for each digit.
+- `activation="softmax"` turns output scores into probabilities. The digit with the highest probability is the prediction.
+
+## Step 5: Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects the method for updating the model’s weights as it learns.
+- `loss="sparse_categorical_crossentropy"` measures how far the predictions are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is used because the digit labels are integers, such as `4`, rather than one-hot vectors.
+
+## Step 6: Train the model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the model using the training images and labels.
+- `epochs=15` means the model processes the full training set 15 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides the training progress messages.
+
+## Step 7: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate(...)` measures performance on the separate test images.
+- It returns loss first and accuracy second.
+- `_` receives the loss, which this line does not use.
+- `test_accuracy` receives the accuracy.
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `print(...)` displays the result.
+- `test_accuracy * 100` converts the fraction into a percentage.
+- `:.2f` formats it to two decimal places.
+
+## Output interpretation
+
+```text
+Testing accuracy: 97.93%
+```
+
+The model classified **97.93% of the test images correctly**.
+
+## Observing the effect of two hidden layers
+
+This code uses two hidden layers with 256 and 128 neurons. The first learns patterns from the 784 pixel inputs; the second combines those learned patterns before classification.
+
+To **observe the effect** of hidden layers, compare this model’s test accuracy with a model that has a different number of hidden layers or neurons, using the same dataset split and training settings. This code only reports the performance of the two-hidden-layer model; by itself, it does not show a comparison.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| Hidden layer | A layer between the input and output layers |
+| Dense layer | A fully connected layer |
+| Flattening | Turning a 28 × 28 image into 784 values |
+| Normalization | Scaling pixel values from 0–255 to 0–1 |
+| Epoch | One complete pass through the training data |
+| Softmax | Converts output scores into probabilities |
+| Test accuracy | Fraction of test images classified correctly |
+
+## One-minute explanation for the external examiner
+
+> This practical classifies handwritten MNIST digits using a Feedforward Neural Network with two hidden Dense layers. The images are loaded using Keras, and pixel values are normalized from 0 to 1. Each 28 by 28 image is flattened into 784 inputs. The model has hidden layers with 256 and 128 neurons, both using ReLU, followed by a 10-neuron Softmax output layer. It is trained for 15 epochs with Adam and sparse categorical cross-entropy, then evaluated on test data. The test accuracy obtained is 97.93%. To observe the effect of hidden layers, this result can be compared with models using different layer configurations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify handwritten digits using an FNN with two hidden Dense layers.
+
+2. **What is a hidden layer?**  
+   A layer between the input and output layers that learns useful patterns from data.
+
+3. **How many hidden layers are used here?**  
+   Two: one with 256 neurons and one with 128 neurons.
+
+4. **What is the input size of the model?**  
+   784 values per image.
+
+5. **Why is each image flattened?**  
+   Dense layers expect a one-dimensional vector rather than a 2D image.
+
+6. **How many pixels are in each MNIST image?**  
+   784, because `28 × 28 = 784`.
+
+7. **Why normalize the pixel values?**  
+   To scale them from 0–255 to 0–1, which helps model training.
+
+8. **What does a Dense layer do?**  
+   It connects each neuron to all neurons in the previous layer.
+
+9. **What does ReLU do?**  
+   It sets negative values to zero and keeps positive values.
+
+10. **Why are there 10 output neurons?**  
+    The dataset has 10 digit classes, from 0 to 9.
+
+11. **What does Softmax do?**  
+    It converts the output scores into probabilities for the digit classes.
+
+12. **Why use sparse categorical cross-entropy?**  
+    It works for multiple classes when labels are stored as integers.
+
+13. **What is an optimizer?**  
+    A method for adjusting the model’s weights during learning. This code uses Adam.
+
+14. **What is an epoch?**  
+    One complete pass through the training dataset.
+
+15. **What does `batch_size=128` mean?**  
+    The model processes up to 128 images before updating its weights.
+
+16. **What is the purpose of test data?**  
+    It evaluates how well the trained model performs on separate examples.
+
+17. **What does 97.93% test accuracy mean?**  
+    The model correctly classified 97.93% of the test images.
+
+18. **Does this practical prove that two hidden layers are better than one?**  
+    No. A comparison with a one-hidden-layer model using the same settings is needed to make that conclusion.
+
+19. **How could you observe the effect of hidden layers?**  
+    Train and evaluate models with different hidden-layer counts or sizes, then compare their test accuracy.
+
+20. **Can adding more hidden layers always improve accuracy?**  
+    No. More layers can increase model complexity and may cause overfitting or make training harder.

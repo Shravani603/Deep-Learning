@@ -1,0 +1,1040 @@
+# Chit 7: Sign Language CNN: five predicted alphabet labels
+
+7. Implement a CNN model to recognize different alphabet hand gestures. Use Conv2D, MaxPooling2D, Flatten and Dense layers. Evaluate the model using test data and display predicted alphabet labels for five test images. 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Reshape the images
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+# Step 8: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+# Step 9: Show five examples
+plt.figure(figsize=(14, 4))
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+    if image_shape[-1] == 1:
+        plt.imshow(image.squeeze(), cmap="gray")
+    else:
+        plt.imshow(image)
+    plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+    plt.axis("off")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 7: Sign Language CNN – Five Predicted Alphabet Labels
+
+**Subject:** Deep Learning Practical  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+## 1. Aim of the Practical
+
+To implement a Convolutional Neural Network (CNN) to recognize different American Sign Language alphabet gestures using the Sign Language MNIST dataset. Use Conv2D, MaxPooling2D, Flatten and Dense layers, evaluate the model using testing data and display predicted alphabet labels for five test images.
+
+---
+
+# 2. Understanding the Practical
+
+In this practical, we use CNN to recognize hand gestures and predict their corresponding alphabet labels.
+
+The practical performs the following operations:
+
+1. Import required libraries.
+2. Load the Sign Language MNIST dataset.
+3. Normalize pixel values between 0 and 1.
+4. Encode alphabet labels into numerical values.
+5. Reshape images into 28 × 28 × 1 format.
+6. Build a CNN model.
+7. Compile and train the model.
+8. Evaluate testing accuracy.
+9. Predict alphabet labels for test images.
+10. Display five images with actual and predicted labels.
+
+### What is the main difference between Chit 6 and Chit 7?
+
+| Chit 6 | Chit 7 |
+|---|---|
+| Builds a CNN model. | Builds a CNN model. |
+| Trains the model. | Trains the model. |
+| Evaluates testing accuracy. | Evaluates testing accuracy. |
+| Displays testing accuracy. | Displays five test images with actual and predicted labels. |
+
+**Important:** The CNN architecture and training process are the same in both practicals. Chit 7 adds image prediction and visualization.
+
+---
+
+# 3. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+### Explanation
+
+| Code | Purpose |
+|---|---|
+| `import numpy as np` | Used for numerical calculations and array operations. |
+| `import tensorflow as tf` | Used for Deep Learning operations. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `import pandas as pd` | Used to load and handle CSV datasets. |
+| `Conv2D` | Extracts image features using convolution. |
+| `MaxPooling2D` | Reduces feature map dimensions. |
+| `Flatten` | Converts multidimensional data into one-dimensional data. |
+| `LabelEncoder` | Converts labels into numerical values. |
+| `matplotlib.pyplot as plt` | Used to display images and graphs. |
+
+**Important:** `matplotlib` is newly required here because we need to display five test images.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+### Explanation
+
+- `pd.read_csv()` reads CSV files.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+We use two datasets:
+
+1. Training dataset – Used to train the CNN model.
+2. Testing dataset – Used to evaluate the model.
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+**Explanation:**
+
+- `X_train` stores training images.
+- `X_test` stores testing images.
+- `drop(columns="label")` removes the alphabet label column.
+- `to_numpy()` converts data into NumPy arrays.
+- `dtype="float32"` converts values into floating-point numbers.
+- `/255.0` normalizes pixel values between 0 and 1.
+
+**Why divide by 255?**
+
+Because grayscale pixel values range from 0 to 255.
+
+After normalization:
+
+- 0 becomes 0.
+- 128 becomes approximately 0.50.
+- 255 becomes 1.
+
+This helps the model learn efficiently.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+
+y_train = encoder.fit_transform(train_df["label"])
+
+y_test = encoder.transform(test_df["label"])
+```
+
+**Explanation:**
+
+- `LabelEncoder()` creates a label encoder.
+- `fit_transform()` learns the training labels and converts them into numerical values.
+- `transform()` converts testing labels using the same mapping.
+
+**Why do we use LabelEncoder?**
+
+To convert alphabet labels into numerical values that the CNN model can understand.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+
+image_shape = (28, 28, 1)
+```
+
+**First line:**
+
+Converts numerical alphabet labels into characters.
+
+- `encoder.classes_` – Returns the original available classes.
+- `int(label)` – Converts the label into an integer.
+- `+65` – Adds 65 to get the ASCII value.
+- `chr()` – Converts ASCII value into an alphabet.
+
+**Second line:**
+
+Defines the image dimensions.
+
+- 28 = Height.
+- 28 = Width.
+- 1 = Grayscale channel.
+
+---
+
+## Step 3: Reshape the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28, 1)
+
+X_test = X_test.reshape(-1, 28, 28, 1)
+```
+
+### Explanation
+
+Reshaping converts the images into the required CNN input format.
+
+```text
+(Number of Images, 28, 28, 1)
+```
+
+| Dimension | Meaning |
+|---|---|
+| -1 | Automatically calculates number of images. |
+| 28 | Image height. |
+| 28 | Image width. |
+| 1 | Number of channels. |
+
+**Why do we use 1?**
+
+Because the images are grayscale.
+
+**Why do we reshape?**
+
+Because Conv2D layers require four-dimensional image input.
+
+---
+
+## Step 4: Build the CNN Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the CNN architecture.
+
+Let's understand each layer.
+
+### 1. Input Layer
+
+```python
+Input(shape=X_train.shape[1:])
+```
+
+- Accepts input images.
+- Image dimensions are 28 × 28 × 1.
+- `shape[1:]` selects image dimensions without the number of images.
+
+### 2. First Convolutional Layer
+
+```python
+Conv2D(32, (3, 3), activation="relu")
+```
+
+- `Conv2D` – Performs convolution.
+- `32` – Number of filters.
+- `(3,3)` – Kernel size.
+- `relu` – Activation function.
+
+It extracts basic image features such as edges and shapes.
+
+### 3. First Max Pooling Layer
+
+```python
+MaxPooling2D((2, 2))
+```
+
+Reduces feature map dimensions by selecting the maximum value from each 2 × 2 region.
+
+### 4. Second Convolutional Layer
+
+```python
+Conv2D(64, (3, 3), activation="relu")
+```
+
+Uses 64 filters to extract more detailed features from images.
+
+### 5. Second Max Pooling Layer
+
+```python
+MaxPooling2D((2, 2))
+```
+
+Further reduces feature map dimensions and retains important features.
+
+### 6. Flatten Layer
+
+```python
+Flatten()
+```
+
+Converts multidimensional feature maps into a one-dimensional array.
+
+### 7. Dense Layer
+
+```python
+Dense(128, activation="relu")
+```
+
+Creates a fully connected layer with 128 neurons.
+
+It learns relationships between extracted features.
+
+### 8. Output Layer
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Creates 24 output neurons.
+- Softmax calculates the probability of each alphabet.
+- The alphabet with the highest probability is selected.
+
+### Remember the CNN Architecture
+
+```text
+       Input Image
+       28 × 28 × 1
+             |
+             v
+       Conv2D (32)
+          3 × 3
+           ReLU
+             |
+             v
+      MaxPooling (2 × 2)
+             |
+             v
+       Conv2D (64)
+          3 × 3
+           ReLU
+             |
+             v
+      MaxPooling (2 × 2)
+             |
+             v
+          Flatten
+             |
+             v
+       Dense (128)
+           ReLU
+             |
+             v
+       Dense (24)
+          Softmax
+             |
+             v
+     Predicted Alphabet
+```
+
+---
+
+## Step 5: Compile the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Calculates prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**Remember:**
+- Optimizer = Adam.
+- Loss function = Sparse Categorical Crossentropy.
+- Metric = Accuracy.
+
+---
+
+## Step 6: Train the Model
+
+### Code
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+### Explanation
+
+This line trains the CNN model using training data.
+
+| Parameter | Meaning |
+|---|---|
+| `model.fit()` | Trains the model. |
+| `X_train` | Training images. |
+| `y_train` | Training labels. |
+| `epochs=10` | Trains for 10 complete iterations. |
+| `batch_size=128` | Processes 128 images together before updating weights. |
+| `verbose=0` | Hides training progress. |
+
+### What happens during training?
+
+1. Images are given to the CNN model.
+2. Convolution layers extract features.
+3. Pooling layers reduce dimensions.
+4. Dense layers perform classification.
+5. Predicted results are compared with actual labels.
+6. Loss is calculated.
+7. Adam optimizer updates weights.
+
+This process repeats for 10 epochs.
+
+---
+
+## Step 7: Evaluate on Test Data
+
+### Code
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+### Explanation
+
+**First line:**
+
+`model.evaluate()` evaluates the trained CNN model using testing data.
+
+- `X_test` – Testing images.
+- `y_test` – Actual testing labels.
+- `verbose=0` – Hides evaluation progress.
+- `_` – Stores the loss value, which we do not use.
+- `test_accuracy` – Stores testing accuracy.
+
+**Second line:**
+
+Displays testing accuracy in percentage.
+
+- `test_accuracy * 100` – Converts accuracy into percentage.
+- `:.2f` – Displays two decimal places.
+
+**Note:** Your Chit 7 code does not include its actual accuracy output, so use the percentage displayed when you execute it.
+
+---
+
+# Step 8: Predict Test Images
+
+### Code
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This is a very important step in Chit 7.
+
+### Explanation
+
+**1. `model.predict(X_test)`**
+
+Uses the trained CNN model to predict the alphabet classes of testing images.
+
+It returns probability values for all 24 classes.
+
+**2. `np.argmax()`**
+
+Returns the index of the highest probability.
+
+Example:
+
+Suppose the model produces:
+
+```text
+[0.05, 0.10, 0.75, 0.10]
+```
+
+The highest probability is `0.75`.
+
+Its index is `2`.
+
+Therefore, the predicted class is 2.
+
+**3. `axis=1`**
+
+Finds the highest probability from each image's prediction.
+
+**4. `y_pred`**
+
+Stores the predicted numerical labels of all testing images.
+
+**Remember:**
+
+`model.predict()` predicts the output, whereas `np.argmax()` selects the class having the highest probability.
+
+---
+
+# Step 9: Display Five Examples
+
+This is the main additional step in Chit 7.
+
+### Code – Part 1
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+**Explanation:**
+
+- `plt.figure()` creates a figure.
+- `figsize=(14,4)` sets its width to 14 inches and height to 4 inches.
+
+It creates space to display five images horizontally.
+
+### Code – Part 2
+
+```python
+for i in range(5):
+```
+
+**Explanation:**
+
+- `for` starts a loop.
+- `range(5)` generates values from 0 to 4.
+- Therefore, the loop executes five times.
+
+**Purpose:** To display five testing images.
+
+### Code – Part 3
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+**Explanation:**
+
+- `X_test[i]` selects the testing image at index `i`.
+- `.reshape(image_shape)` reshapes it into 28 × 28 × 1.
+- `image` stores the selected image.
+
+### Code – Part 4
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+**Explanation:**
+
+Creates multiple plots in one figure.
+
+| Value | Meaning |
+|---|---|
+| 1 | Number of rows. |
+| 5 | Number of columns. |
+| i + 1 | Position of the current image. |
+
+Therefore, five images are displayed in one row.
+
+### Code – Part 5
+
+```python
+if image_shape[-1] == 1:
+    plt.imshow(image.squeeze(), cmap="gray")
+else:
+    plt.imshow(image)
+```
+
+**Explanation:**
+
+This condition checks whether the image is grayscale or colored.
+
+**First line:**
+
+```python
+if image_shape[-1] == 1:
+```
+
+Checks whether the image has one channel.
+
+**Second line:**
+
+```python
+plt.imshow(image.squeeze(), cmap="gray")
+```
+
+- `imshow()` displays the image.
+- `squeeze()` removes the extra dimension of size 1.
+- `cmap="gray"` displays the image in grayscale.
+
+**Else condition:**
+
+```python
+plt.imshow(image)
+```
+
+Displays the image normally if it is not grayscale.
+
+**Remember:** Our dataset contains grayscale images, so the `if` condition executes.
+
+### Code – Part 6
+
+```python
+plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+```
+
+This line displays the actual and predicted alphabet labels above each image.
+
+Let's understand it:
+
+- `plt.title()` – Adds a title above the image.
+- `Actual:` – Displays the actual alphabet.
+- `y_test[i]` – Gets the actual numerical label.
+- `y_pred[i]` – Gets the predicted numerical label.
+- `class_names[]` – Converts numerical labels into alphabet characters.
+- `int()` – Converts the label into an integer.
+- `\n` – Moves the predicted label to the next line.
+- `Predicted:` – Displays the predicted alphabet.
+
+**Example:**
+
+```text
+Actual: G
+Predicted: G
+```
+
+This means the actual alphabet is G and the model correctly predicted G.
+
+If the output is:
+
+```text
+Actual: G
+Predicted: F
+```
+
+It means the model incorrectly predicted F instead of G.
+
+### Code – Part 7
+
+```python
+plt.axis("off")
+```
+
+Hides the X-axis and Y-axis values.
+
+### Code – Part 8
+
+```python
+plt.tight_layout()
+```
+
+Automatically adjusts spacing between images to prevent overlapping.
+
+### Code – Part 9
+
+```python
+plt.show()
+```
+
+Displays the final five images with their actual and predicted alphabet labels.
+
+---
+
+# 4. Understanding the Output
+
+Your Chit 7 produces five images in a single row.
+
+Each image displays:
+
+- Actual alphabet – The correct alphabet from the testing dataset.
+- Predicted alphabet – The alphabet predicted by the CNN model.
+
+### How to interpret the output?
+
+| Actual | Predicted | Result |
+|---|---|---|
+| G | G | Correct |
+| F | F | Correct |
+| K | K | Correct |
+| A | A | Correct |
+| D | D | Correct |
+
+The above is an example of how to interpret the output.
+
+**Important:** Chit 7 uses the same first five testing images as Chit 3. However, Chit 3 uses FNN and Chit 7 uses CNN. Therefore, their predicted labels may differ.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 5. Important Viva Questions and Answers
+
+## A. Basic Questions
+
+**Q1. What is CNN?**
+
+CNN stands for Convolutional Neural Network. It is a Deep Learning algorithm mainly used for image recognition and classification.
+
+**Q2. Which dataset is used in this practical?**
+
+Sign Language MNIST dataset.
+
+**Q3. What is the image size?**
+
+28 × 28 pixels.
+
+**Q4. How many classes are present?**
+
+24 classes.
+
+**Q5. Why do we use CNN?**
+
+To automatically extract important features from images and classify them.
+
+## B. Prediction-Based Questions
+
+**Q6. Which function is used to predict the alphabet?**
+
+`model.predict()`.
+
+**Q7. What is the purpose of np.argmax()?**
+
+It returns the index of the highest probability.
+
+**Q8. What is y_pred?**
+
+It stores the predicted numerical labels of testing images.
+
+**Q9. What is y_test?**
+
+It stores the actual labels of testing images.
+
+**Q10. How many images are displayed in this practical?**
+
+Five images.
+
+**Q11. Which library is used to display images?**
+
+Matplotlib.
+
+**Q12. What is plt.imshow()?**
+
+It is used to display images.
+
+**Q13. What is plt.subplot()?**
+
+It is used to display multiple plots in one figure.
+
+**Q14. What is plt.title()?**
+
+It adds a title above an image or graph.
+
+**Q15. What is cmap="gray"?**
+
+It displays an image using grayscale colors.
+
+**Q16. What is image.squeeze()?**
+
+It removes dimensions of size 1 from an array.
+
+**Q17. What does plt.axis("off") do?**
+
+It hides the axes around the image.
+
+## C. CNN Architecture Questions
+
+**Q18. Which layers are used in CNN?**
+
+Conv2D, MaxPooling2D, Flatten and Dense.
+
+**Q19. What is Conv2D?**
+
+It extracts image features using filters.
+
+**Q20. What is MaxPooling2D?**
+
+It reduces feature map dimensions by selecting maximum values.
+
+**Q21. What is Flatten?**
+
+It converts multidimensional data into a one-dimensional array.
+
+**Q22. What is the kernel size?**
+
+3 × 3.
+
+**Q23. How many filters are used in the first Conv2D layer?**
+
+32 filters.
+
+**Q24. How many filters are used in the second Conv2D layer?**
+
+64 filters.
+
+**Q25. Which activation function is used in the hidden layers?**
+
+ReLU.
+
+**Q26. Which activation function is used in the output layer?**
+
+Softmax.
+
+## D. Training Questions
+
+**Q27. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q28. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+**Q29. How many epochs are used?**
+
+10 epochs.
+
+**Q30. What is the batch size?**
+
+128.
+
+**Q31. What is normalization?**
+
+It converts pixel values between 0 and 1.
+
+**Q32. What is the purpose of model.evaluate()?**
+
+It evaluates the model using testing data.
+
+---
+
+# 6. Important Differences for External Viva
+
+### Difference Between model.predict() and model.evaluate()
+
+| model.predict() | model.evaluate() |
+|---|---|
+| Generates predictions. | Evaluates model performance. |
+| Returns predicted probabilities. | Returns loss and metrics. |
+| Used to identify predicted classes. | Used to calculate testing accuracy and loss. |
+
+### Difference Between Actual and Predicted Labels
+
+| Actual Label | Predicted Label |
+|---|---|
+| Correct alphabet from the dataset. | Alphabet predicted by the model. |
+| Stored in `y_test`. | Stored in `y_pred`. |
+| Used as the correct answer. | Compared with actual answer. |
+
+---
+
+# 7. Quick Revision Before Viva
+
+| Parameter | Answer |
+|---|---|
+| Practical | Sign Language CNN |
+| Dataset | Sign Language MNIST |
+| Image Size | 28 × 28 |
+| Input Shape | 28 × 28 × 1 |
+| Classes | 24 |
+| Convolution Layers | 2 |
+| First Filters | 32 |
+| Second Filters | 64 |
+| Kernel Size | 3 × 3 |
+| Pooling Layers | 2 |
+| Pooling Type | Max Pooling |
+| Flatten | Yes |
+| Dense Neurons | 128 |
+| Output Neurons | 24 |
+| Hidden Activation | ReLU |
+| Output Activation | Softmax |
+| Optimizer | Adam |
+| Loss Function | Sparse Categorical Crossentropy |
+| Epochs | 10 |
+| Batch Size | 128 |
+| Prediction Function | `model.predict()` |
+| Highest Probability | `np.argmax()` |
+| Images Displayed | 5 |
+| Image Display Library | Matplotlib |
+
+---
+
+# 8. One-Minute Explanation for External
+
+"We have implemented a Convolutional Neural Network to recognize American Sign Language alphabets using the Sign Language MNIST dataset.
+
+First, we imported the required libraries and loaded the training and testing datasets.
+
+Then, we normalized the pixel values between 0 and 1, encoded the alphabet labels and reshaped the images into 28 × 28 × 1 format.
+
+Next, we created a CNN model using two convolutional layers, two Max Pooling layers, one Flatten layer and two Dense layers.
+
+We compiled the model using Adam optimizer and Sparse Categorical Crossentropy loss function.
+
+After that, we trained the model for 10 epochs with a batch size of 128 and evaluated its testing accuracy.
+
+Then, we used model.predict() to predict the alphabet labels of testing images. We used np.argmax() to select the alphabet having the highest probability.
+
+Finally, using Matplotlib, we displayed five test images along with their actual and predicted alphabet labels."
+
+---
+
+## 9. Most Important Things to Remember
+
+For Chit 7, concentrate especially on these five additional concepts:
+
+1. `model.predict()` – Predicts the alphabet classes.
+2. `np.argmax()` – Selects the class with the highest probability.
+3. `y_test` – Contains actual labels.
+4. `y_pred` – Contains predicted labels.
+5. `plt.imshow()` – Displays test images.
+
+**Most important viva question:** What is the difference between `model.predict()` and `model.evaluate()`?
+
+- `predict()` generates predictions.
+- `evaluate()` calculates model performance, such as loss and accuracy.

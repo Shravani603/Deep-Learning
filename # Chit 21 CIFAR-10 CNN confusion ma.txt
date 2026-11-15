@@ -1,0 +1,410 @@
+# Chit 21: CIFAR-10 CNN: confusion matrix
+
+21. Build a CNN model for object classification. Evaluate its performance using test images and generate a confusion matrix. Use Dataset - CIFAR-10 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+
+# Step 2: Load and prepare CIFAR-10
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+X = X.reshape(-1, 32, 32, 3) / 255.0
+
+class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+image_shape = (32, 32, 3)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y
+)
+
+
+# Step 3: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 4: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 5: Prepare and run the model
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+
+
+# Step 6: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+# Step 7: Confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=np.arange(num_classes))
+display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+fig, ax = plt.subplots(figsize=(10, 10))
+display.plot(ax=ax, xticks_rotation="vertical", colorbar=False, cmap="Blues", values_format="d")
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 21: CIFAR-10 CNN — Confusion Matrix
+
+## Aim
+
+Train a CNN to classify CIFAR-10 images into 10 object categories, predict the test images, and use a confusion matrix to see which categories are classified correctly or confused with others.
+
+## How the model works
+
+```text
+32 × 32 RGB image → Conv2D → MaxPooling2D → Conv2D → MaxPooling2D
+                  → Flatten → Dense(128) → Softmax(10 classes)
+                  → Test predictions → Confusion matrix
+```
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+```
+
+- `numpy as np` handles arrays and is used to select predicted classes.
+- `tensorflow as tf` imports TensorFlow, but `tf` is not directly used later.
+- `Sequential` creates a model with layers arranged in order.
+- `Input` defines the model’s input shape.
+- `Dense` creates fully connected layers.
+- `pandas as pd` reads the CSV file.
+- `Conv2D` learns image patterns using filters.
+- `MaxPooling2D` reduces the size of feature maps.
+- `Flatten` converts feature maps into a one-dimensional list.
+- `train_test_split` divides the data into training and test sets.
+- `matplotlib.pyplot as plt` displays the confusion matrix.
+- `confusion_matrix` compares actual and predicted labels.
+- `ConfusionMatrixDisplay` draws and labels the matrix.
+
+## Step 2: Load and prepare CIFAR-10
+
+```python
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+X = X.reshape(-1, 32, 32, 3) / 255.0
+```
+
+- `pd.read_csv(...)` reads the CSV file into a table.
+- `dtype=np.uint8` reads pixel values as small integers in the range 0–255.
+- `y` stores the image labels; conventionally, `y` represents target labels.
+- `data["label"]` selects the label column.
+- `.to_numpy(dtype="int64")` converts the labels into an integer array.
+- `X` stores the image pixels; conventionally, `X` represents input data.
+- `.drop(columns="label")` removes the answer column.
+- `.to_numpy(dtype="float32")` converts pixels into decimal numbers.
+- `.reshape(-1, 32, 32, 3)` arranges each image as 32 × 32 pixels with 3 color channels. `-1` lets Python infer the number of images.
+- `/ 255.0` normalizes pixel values from 0–255 to 0–1.
+
+```python
+class_names = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
+image_shape = (32, 32, 3)
+```
+
+- `class_names` maps class numbers 0–9 to category names. Its order must match the labels in the dataset.
+- `image_shape` describes 32 × 32 RGB images. It is not used later in this code.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y
+)
+```
+
+- `train_test_split(...)` divides the data into training and test sets.
+- `X_train`, `y_train` are used for training.
+- `X_test`, `y_test` are held aside for testing.
+- `test_size=0.2` reserves 20% of the data for testing.
+- `stratify=y` keeps the category proportions similar in both sets.
+- There is no `random_state`, so the split and results can differ between runs.
+
+## Step 3: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the categories: 10.
+- `Sequential([...])` arranges the layers in order.
+- `Input(shape=X_train.shape[1:])` tells the model each image has shape `(32, 32, 3)`.
+- `Conv2D(32, (3, 3), ...)` learns 32 filters, each scanning a 3 × 3 image region.
+- `MaxPooling2D((2, 2))` reduces feature-map size by selecting the largest value in each 2 × 2 region.
+- The second `Conv2D` learns 64 filters to detect more complex patterns.
+- The second pooling layer reduces the feature maps again.
+- `Flatten()` converts the maps into a one-dimensional list.
+- `Dense(128, ...)` combines the learned features using 128 neurons.
+- `Dense(num_classes, ...)` creates 10 output neurons, one per category.
+- `activation="relu"` changes negative values to zero and keeps positive values.
+- `activation="softmax"` converts output scores into probabilities across the 10 classes.
+
+## Step 4: Compile and train
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights.
+- `loss="sparse_categorical_crossentropy"` measures how far the predictions are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is suitable because the labels are category numbers rather than one-hot vectors.
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the model using the training images and labels.
+- `epochs=10` means it goes through the training data 10 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides training progress messages.
+
+## Step 5: Predict test images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+- `model.predict(X_test, ...)` returns class scores for each test image.
+- `np.argmax(..., axis=1)` selects the class with the highest score for each image.
+- `y_pred` stores the predicted class numbers.
+- `axis=1` means selecting the highest score across the 10 classes for each image.
+
+## Step 6: Create and display the confusion matrix
+
+```python
+cm = confusion_matrix(y_test, y_pred, labels=np.arange(num_classes))
+```
+
+- `confusion_matrix(...)` compares actual labels with predicted labels.
+- `y_test` contains the actual test labels.
+- `y_pred` contains the model’s predicted labels.
+- `labels=np.arange(num_classes)` specifies class numbers 0 through 9.
+- `cm` stores the prediction counts in a 10 × 10 array.
+
+```python
+display = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=class_names
+)
+```
+
+Creates a display object that pairs the matrix with the category names.
+
+```python
+fig, ax = plt.subplots(figsize=(10, 10))
+display.plot(
+    ax=ax,
+    xticks_rotation="vertical",
+    colorbar=False,
+    cmap="Blues",
+    values_format="d"
+)
+```
+
+- `plt.subplots(figsize=(10, 10))` creates a 10 × 10 inch figure and its plotting area.
+- `display.plot(...)` draws the confusion matrix.
+- `ax=ax` tells it where to draw.
+- `xticks_rotation="vertical"` rotates the predicted category labels so they fit.
+- `colorbar=False` hides the color scale bar.
+- `cmap="Blues"` uses shades of blue.
+- `values_format="d"` displays counts as whole numbers.
+
+```python
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.show()
+```
+
+- `plt.title(...)` sets the graph title.
+- `plt.tight_layout()` adjusts the spacing.
+- `plt.show()` displays the matrix.
+
+## How to read your confusion matrix
+
+- **Rows** are the actual classes.
+- **Columns** are the predicted classes.
+- **Diagonal cells** show correct predictions.
+- **Off-diagonal cells** show mistakes.
+- Darker cells represent larger counts.
+
+Examples from your matrix:
+
+- Of the actual **airplane** images, 703 were correctly predicted as airplane; 99 were predicted as ship.
+- Of the actual **automobile** images, 703 were correctly predicted; 100 were predicted as truck.
+- Of the actual **cat** images, 535 were correctly predicted; 186 were predicted as dog.
+- Of the actual **dog** images, 561 were correctly predicted; 191 were predicted as cat.
+
+The confusion matrix itself does not print a single accuracy value. Adding its diagonal counts gives 6,378 correct predictions out of 10,000, or about **63.78% accuracy** for the displayed test set. The test split is random here, so results may vary between runs.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| Confusion matrix | A table comparing actual and predicted classes |
+| Diagonal | Correct predictions |
+| Off-diagonal | Incorrect predictions |
+| Row | Actual class |
+| Column | Predicted class |
+| `np.argmax()` | Selects the class with the highest prediction score |
+| `stratify=y` | Keeps class proportions similar in each split |
+
+## One-minute explanation for the external examiner
+
+> This practical uses a CNN to classify CIFAR-10 images into 10 object categories. The CSV pixel data is reshaped into 32 by 32 RGB images and normalized from 0 to 1. The data is split into training and test sets while preserving category proportions. The CNN uses convolution and max-pooling layers to extract image features, followed by Flatten and Dense layers with a Softmax output. After training, it predicts the test labels and creates a confusion matrix. The diagonal shows correct predictions, while off-diagonal cells show which categories are confused.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify CIFAR-10 images and analyze the results using a confusion matrix.
+
+2. **What is CIFAR-10?**  
+   A dataset of color images grouped into 10 object categories.
+
+3. **What are the 10 CIFAR-10 categories?**  
+   Airplane, automobile, bird, cat, deer, dog, frog, horse, ship, and truck.
+
+4. **What does a confusion matrix show?**  
+   It compares each image’s actual class with its predicted class.
+
+5. **What do the rows represent?**  
+   The actual categories.
+
+6. **What do the columns represent?**  
+   The predicted categories.
+
+7. **What do diagonal values show?**  
+   The number of correct predictions for each category.
+
+8. **What do off-diagonal values show?**  
+   The number of times one category was predicted as another.
+
+9. **Why is this confusion matrix 10 × 10?**  
+   The classification task has 10 categories.
+
+10. **What does `np.argmax()` do here?**  
+    It selects the category with the highest prediction score for each test image.
+
+11. **What does `labels=np.arange(num_classes)` specify?**  
+    It fixes the class-number order used in the confusion matrix.
+
+12. **Why use `stratify=y`?**  
+    To keep class proportions similar in the training and test sets.
+
+13. **What is the purpose of `Conv2D`?**  
+    It learns patterns from local image regions.
+
+14. **What does max pooling do?**  
+    It reduces feature-map size by retaining the largest value in each region.
+
+15. **What does `Flatten()` do?**  
+    It turns feature maps into a one-dimensional list for a Dense layer.
+
+16. **What does Softmax do?**  
+    It converts output scores into probabilities across the 10 classes.
+
+17. **Why use sparse categorical cross-entropy?**  
+    It works for multi-class classification when labels are stored as integers.
+
+18. **Why can cats and dogs be confused?**  
+    CIFAR-10 images are small, and some cat and dog images have similar shapes or backgrounds.
+
+19. **How can accuracy be calculated from the matrix?**  
+    Add the diagonal counts and divide by the total number of test images.
+
+20. **Does this code directly print test accuracy?**  
+    No. It predicts the test labels and plots a confusion matrix; accuracy can be calculated from the diagonal or by adding `model.evaluate(X_test, y_test)`.

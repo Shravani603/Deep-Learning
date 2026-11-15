@@ -1,0 +1,318 @@
+# Chit 12: Handwritten MNIST FNN: digit classification
+
+12. Develop a Feedforward Neural Network using TensorFlow/Keras to classify handwritten digits. Normalize the pixel values, flatten the images, train the model and display testing accuracy. Use -- Handwritten MNIST 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+
+
+# Step 2: Load and prepare Handwritten MNIST
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 12: Handwritten MNIST FNN — Digit Classification
+
+## Aim
+
+Build a Feedforward Neural Network (FNN) to classify handwritten digit images. The code normalizes the pixels, flattens each image, trains the model, and displays its test accuracy.
+
+## How the model works
+
+```text
+28 × 28 digit image → 784 pixel values → Dense(256) → Dense(128) → Softmax(10 digits)
+```
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+- `numpy as np` and `tensorflow as tf` import NumPy and TensorFlow with short names. They are not directly used elsewhere in this code.
+- `Sequential` creates a model made of layers arranged in order.
+- `Input` defines the shape of the data entering the model.
+- `Dense` creates a fully connected neural network layer.
+
+## Step 2: Load and prepare Handwritten MNIST
+
+```python
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+```
+
+- `mnist` is the handwritten digit dataset provided by Keras.
+- `load_data()` loads the images and their labels.
+- `X_train` and `y_train` contain the training images and correct digits.
+- `X_test` and `y_test` contain separate test images and their correct digits.
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `.astype("float32")` converts the pixel values to decimal numbers.
+- `/ 255.0` scales pixel values from 0–255 to 0–1. This is called **normalization**.
+
+```python
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+```
+
+- `range(10)` produces the numbers 0 through 9.
+- `str(i)` converts each number to text.
+- The list comprehension builds `["0", "1", ..., "9"]` for displaying digit names if needed. These variables are not used later in this practical.
+- `image_shape` describes a 28 × 28 grayscale image with one channel. It is also not used later.
+
+## Step 3: Flatten the images
+
+```python
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+```
+
+- `len(X_train)` and `len(X_test)` give the number of images.
+- `784` is the number of pixels in a 28 × 28 image: `28 × 28 = 784`.
+- `.reshape(...)` turns each two-dimensional image into a one-dimensional list of 784 pixel values. This is called **flattening**.
+- Dense layers expect each image as a vector of values.
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the digit categories: 10.
+- `Sequential([...])` puts the model’s layers in order.
+- `Input(shape=(X_train.shape[1],))` tells the model that each image has 784 values.
+- `Dense(256, ...)` creates a layer with 256 neurons.
+- `Dense(128, ...)` creates a second layer with 128 neurons.
+- `activation="relu"` changes negative values to zero and keeps positive values. This helps the model learn patterns.
+- `Dense(num_classes, ...)` creates 10 output neurons, one for each digit.
+- `activation="softmax"` converts output scores into probabilities. The digit with the highest probability is the prediction.
+
+## Step 5: Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights during training.
+- `loss="sparse_categorical_crossentropy"` measures how far the predicted probabilities are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is used because the digit labels are integers, such as `0` or `7`, rather than one-hot vectors.
+
+## Step 6: Train the model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the model with the training images and labels.
+- `epochs=15` means the model processes the full training set 15 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides the training progress messages.
+
+## Step 7: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate(...)` measures the model’s performance on the test images.
+- It returns loss first and accuracy second.
+- `_` receives the loss, which this line does not use.
+- `test_accuracy` receives the accuracy.
+- `verbose=0` hides the evaluation progress messages.
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `print(...)` displays the result.
+- `test_accuracy * 100` converts the fraction into a percentage.
+- `:.2f` formats it to two decimal places.
+
+## Output interpretation
+
+```text
+Testing accuracy: 97.29%
+```
+
+The model classified **97.29% of the test images correctly**.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| MNIST | A dataset of handwritten digit images from 0 to 9 |
+| Normalization | Scaling pixel values from 0–255 to 0–1 |
+| Flattening | Turning a 28 × 28 image into 784 values |
+| Dense layer | A fully connected neural network layer |
+| Softmax | Converts output scores into probabilities |
+| Test accuracy | The fraction of separate test images classified correctly |
+
+## One-minute explanation for the external examiner
+
+> This practical uses a Feedforward Neural Network to classify handwritten MNIST digits from 0 to 9. The images are loaded using Keras, and their pixel values are converted to decimal numbers and normalized from 0 to 1. Each 28 by 28 image is flattened into 784 values. The model has two hidden Dense layers with ReLU activation and a 10-neuron Softmax output layer. It is trained for 15 epochs using Adam and sparse categorical cross-entropy. Finally, the model is evaluated on test data, achieving 97.29% test accuracy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify handwritten digit images using an FNN and report test accuracy.
+
+2. **What is the MNIST dataset?**  
+   A collection of handwritten digit images labelled from 0 to 9.
+
+3. **What is the size of each MNIST image?**  
+   28 × 28 pixels.
+
+4. **How many classes are in this classification task?**  
+   Ten classes, one for each digit from 0 to 9.
+
+5. **What is an FNN?**  
+   A neural network where data flows forward from the input through hidden layers to the output.
+
+6. **Why flatten the images?**  
+   Dense layers take a one-dimensional vector as input, so each 28 × 28 image becomes 784 values.
+
+7. **Why divide pixel values by 255?**  
+   To normalize them from 0–255 to 0–1.
+
+8. **What is the input size of the model?**  
+   784 values per image.
+
+9. **What does a Dense layer do?**  
+   It connects each neuron to all neurons in the previous layer.
+
+10. **What does ReLU do?**  
+    It changes negative values to zero and keeps positive values.
+
+11. **What does Softmax do?**  
+    It converts the model’s output scores into probabilities for the 10 digits.
+
+12. **Why are there 10 neurons in the output layer?**  
+    There are 10 possible digit classes.
+
+13. **What is an optimizer?**  
+    A method for updating the model’s weights during training. This practical uses Adam.
+
+14. **What is a loss function?**  
+    A measure of how far the model’s predictions are from the correct labels.
+
+15. **Why use sparse categorical cross-entropy?**  
+    It is suitable for multiple classes when the labels are stored as integers.
+
+16. **What is an epoch?**  
+    One complete pass through the training data.
+
+17. **What does `batch_size=128` mean?**  
+    The model processes up to 128 images before updating its weights.
+
+18. **What is the difference between training and test data?**  
+    Training data teaches the model; test data measures its performance on separate examples.
+
+19. **What does 97.29% test accuracy mean?**  
+    The model correctly classified 97.29% of the test images.
+
+20. **Does 97.29% accuracy mean every digit is classified correctly?**  
+    No. It means that percentage of the test set was correct; some images may still be misclassified.

@@ -1,0 +1,442 @@
+# Chit 13: Sign Language FNN: training and testing graphs
+
+13. Construct a Feedforward Neural Network to recognize different ASL alphabet hand gestures. Train the model and display training accuracy, testing accuracy and loss graph. Use – Dataset - Sign Language MNIST 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+
+
+# Step 7: Evaluate on test data
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+train_accuracy = history.history["accuracy"][-1]
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+print("Testing Loss:", test_loss)
+
+
+# Step 8: Plot accuracy and loss
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 13: Sign Language FNN — Training and Testing Graphs
+
+## Aim
+
+Build a Feedforward Neural Network (FNN) to classify ASL alphabet gestures, train it, evaluate it on test data, and plot the training and validation accuracy and loss.
+
+## How the model works
+
+```text
+28 × 28 image → flatten to 784 pixel values → Dense(256) → Dense(128) → Softmax(24 classes)
+```
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+- `pandas as pd` reads the CSV files.
+- `LabelEncoder` converts labels into consecutive numbers.
+- `Sequential` creates a model with layers arranged in order.
+- `Input` defines the model’s input shape.
+- `Dense` creates fully connected layers.
+- `matplotlib.pyplot as plt` plots the graphs.
+- `numpy as np` and `tensorflow as tf` are imported but not directly used in this code.
+
+## Step 2: Load and prepare Sign Language MNIST
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+- `pd.read_csv(...)` loads each CSV file into a table.
+- `train_df` contains data used to train the model.
+- `test_df` contains separate data used to evaluate it.
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+- `X_train` and `X_test` hold the pixel inputs.
+- `.drop(columns="label")` removes the answer column.
+- `.to_numpy(dtype="float32")` converts pixel values into decimal numbers.
+- `/ 255.0` scales pixel values from 0–255 to 0–1. This is called **normalization**.
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+```
+
+- `LabelEncoder()` creates a label converter.
+- `fit_transform(...)` learns the class mapping from the training labels and converts them to consecutive numbers.
+- `transform(...)` applies the same mapping to test labels.
+- `y_train` and `y_test` contain the correct class numbers.
+- `class_names` converts the original label numbers into alphabet letters.
+- Sign Language MNIST has 24 classes: J and Z are omitted because their gestures involve movement.
+- `image_shape` describes a 28 × 28 grayscale image, but it is not used later here.
+
+## Step 3: Flatten the images
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+- A 28 × 28 image has `28 × 28 = 784` pixels.
+- `.reshape(...)` changes how the pixel values are arranged.
+- `-1` tells Python to calculate the number of images automatically.
+- The final shape gives each image 784 values, which a Dense FNN can use.
+
+The first reshape to 28 × 28 and then back to 784 is unnecessary because the CSV already provides 784 pixels per image. A direct `.reshape(-1, 784)` would also work.
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the alphabet classes; here, it is 24.
+- `Sequential([...])` arranges the layers in order.
+- `Input(shape=(X_train.shape[1],))` tells the model that each image has 784 pixel values.
+- `Dense(256, ...)` and `Dense(128, ...)` are hidden layers with 256 and 128 neurons.
+- `activation="relu"` changes negative values to zero and keeps positive values.
+- `Dense(num_classes, ...)` creates 24 output neurons, one for each class.
+- `activation="softmax"` turns output scores into probabilities. The highest probability is the predicted class.
+
+## Step 5: Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights.
+- `loss="sparse_categorical_crossentropy"` measures the difference between predictions and the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” fits because the labels are class numbers, not one-hot vectors.
+
+## Step 6: Train the model
+
+```python
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+- `model.fit(...)` trains the model using training images and labels.
+- `epochs=15` means the model goes through the training data 15 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `validation_split=0.1` reserves 10% of the training data to check performance during training. These examples are not used to update the weights.
+- `verbose=0` hides progress messages.
+- `history` stores the accuracy and loss values for each epoch. The graphs use these values.
+
+## Step 7: Evaluate on test data
+
+```python
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate(...)` measures performance on the separate test set.
+- It returns loss first and accuracy second.
+- `test_loss` receives the loss; `test_accuracy` receives the accuracy.
+- `verbose=0` hides progress messages.
+
+```python
+train_accuracy = history.history["accuracy"][-1]
+```
+
+- `history.history` stores recorded metrics in a dictionary.
+- `"accuracy"` selects training accuracy values.
+- `[-1]` selects the last recorded value, from the final epoch.
+
+```python
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+print("Testing Loss:", test_loss)
+```
+
+- The first two lines display training and test accuracy as percentages.
+- `:.2f` formats the percentage to two decimal places.
+- The last line displays the test loss.
+
+## Step 8: Plot accuracy and loss
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a figure 12 inches wide and 4 inches high.
+
+### Accuracy graph
+
+```python
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+```
+
+- `plt.subplot(1, 2, 1)` selects the first graph in a layout of one row and two columns.
+- `"accuracy"` is training accuracy; `"val_accuracy"` is validation accuracy.
+- `label` names each line for the legend.
+- The remaining commands set the graph title, axis labels, and legend.
+
+### Loss graph
+
+```python
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+```
+
+- `plt.subplot(1, 2, 2)` selects the second graph.
+- `"loss"` is training loss; `"val_loss"` is validation loss.
+- The other commands label the graph and its lines.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `plt.tight_layout()` adjusts spacing so the plots and labels fit.
+- `plt.show()` displays the graphs.
+
+## How to interpret your graphs
+
+- **Accuracy:** Training accuracy rises from about 32% to about 99%. Validation accuracy also rises, with small dips, and ends around 99%.
+- **Loss:** Training and validation loss generally decrease from around 2 or higher to close to 0.05.
+- The model improves across the 15 epochs: accuracy rises while loss falls.
+- The graph plots **training and validation** results. Test accuracy and test loss are calculated separately in Step 7.
+- The horizontal axis is indexed from 0 to 14, corresponding to epochs 1 through 15.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| FNN | A neural network where information moves forward through layers |
+| Flattening | Turning a 28 × 28 image into 784 values |
+| Normalization | Scaling pixels from 0–255 to 0–1 |
+| Epoch | One complete pass through training data |
+| Validation data | Training-set examples held aside to check progress |
+| Test accuracy | Fraction of test examples classified correctly |
+| Loss | A measure of prediction error |
+| `history` | Stores metrics recorded during training |
+
+## One-minute explanation for the external examiner
+
+> This practical builds a Feedforward Neural Network to recognize ASL alphabet gestures using Sign Language MNIST. The CSV images are separated from their labels, and pixel values are normalized from 0 to 1. Each 28 by 28 image is flattened into 784 inputs. The model has two hidden Dense layers with ReLU activation and a Softmax output layer with 24 classes. It is trained for 15 epochs using Adam and sparse categorical cross-entropy, with 10% of the training data reserved for validation. The model is evaluated on separate test data, and the training and validation accuracy and loss are plotted over the epochs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify ASL alphabet images using an FNN and plot training and validation metrics.
+
+2. **What is an FNN?**  
+   A neural network where data moves forward from input through hidden layers to output.
+
+3. **What is the Sign Language MNIST dataset?**  
+   A dataset of 28 × 28 grayscale hand gesture images representing alphabet classes.
+
+4. **Why are there 24 classes?**  
+   J and Z are omitted because their gestures involve movement.
+
+5. **Why normalize pixel values?**  
+   To scale them from 0–255 to 0–1, which helps training.
+
+6. **Why flatten the images?**  
+   Dense layers take one-dimensional vectors, so each image becomes 784 values.
+
+7. **What does a Dense layer do?**  
+   It connects each neuron to all neurons in the previous layer.
+
+8. **What is ReLU?**  
+   An activation function that changes negative values to zero and keeps positive values.
+
+9. **What does Softmax do?**  
+   It converts output scores into probabilities across the classes.
+
+10. **Why use `sparse_categorical_crossentropy`?**  
+    The task has multiple classes and labels are stored as integers.
+
+11. **What is the purpose of Adam?**  
+    It updates the model weights during training.
+
+12. **What is an epoch?**  
+    One full pass through the training data.
+
+13. **What does batch size 128 mean?**  
+    The model processes up to 128 images before making a weight update.
+
+14. **What is `validation_split=0.1`?**  
+    It reserves 10% of the training data for validation.
+
+15. **Is validation data used to update the model’s weights?**  
+    No. It is used to measure performance during training.
+
+16. **What is the difference between validation and test data?**  
+    Validation data checks progress during training; test data evaluates the trained model separately.
+
+17. **What does `history.history["accuracy"]` contain?**  
+    The training accuracy recorded at each epoch.
+
+18. **What does `[-1]` select?**  
+    The last recorded accuracy value, from the final epoch.
+
+19. **What does a decreasing loss graph indicate?**  
+    The model’s predictions are getting closer to the correct labels.
+
+20. **Why display both training and validation curves?**  
+    To compare performance on examples used for learning with examples held aside during training.

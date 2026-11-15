@@ -1,0 +1,406 @@
+# Chit 20: Handwritten MNIST CNN: training and validation graphs
+
+20. Implement a CNN model for handwritten digit classification. Display training and validation accuracy and loss graphs. Use Dataset - Handwritten MNIST 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Handwritten MNIST
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Reshape the images
+X_train = X_train[..., np.newaxis]
+X_test = X_test[..., np.newaxis]
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+history = model.fit(
+    X_train, y_train,
+    epochs=10,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+
+
+# Step 7: Plot accuracy and loss
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 20: Handwritten MNIST CNN — Training and Validation Graphs
+
+## Aim
+
+Train a CNN to classify handwritten digits and plot how its training and validation accuracy and loss change over 10 epochs.
+
+## How the model works
+
+```text
+28 × 28 digit image → Conv2D → MaxPooling2D → Conv2D → MaxPooling2D
+                   → Flatten → Dense(128) → Softmax(10 digits)
+```
+
+The convolution layers learn visual features from the images. Pooling layers reduce the feature maps, and the Dense layers use those features to predict a digit.
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+import matplotlib.pyplot as plt
+```
+
+- `numpy as np` is used to add a channel dimension with `np.newaxis`.
+- `tensorflow as tf` imports TensorFlow, but `tf` is not directly used later.
+- `Sequential` creates a model with layers in order.
+- `Input` defines the model’s input shape.
+- `Dense` creates fully connected layers.
+- `Conv2D` learns image patterns using filters.
+- `MaxPooling2D` reduces feature-map size.
+- `Flatten` converts feature maps into a one-dimensional list.
+- `matplotlib.pyplot as plt` plots the graphs.
+
+## Step 2: Load and prepare Handwritten MNIST
+
+```python
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+```
+
+- `mnist` is the handwritten digit dataset provided by Keras.
+- `load_data()` loads the images and correct labels.
+- `X_train`, `y_train` contain training images and labels.
+- `X_test`, `y_test` contain separate test images and labels.
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `.astype("float32")` converts pixel values to decimal numbers.
+- `/ 255.0` scales pixel values from 0–255 to 0–1. This is called **normalization**.
+
+```python
+class_names = [str(i) for i in range(10)]
+image_shape = (28, 28, 1)
+```
+
+- `range(10)` generates numbers from 0 to 9.
+- `str(i)` converts each number to text, creating `["0", "1", ..., "9"]`.
+- `class_names` and `image_shape` are defined but not used later in this code.
+
+## Step 3: Reshape the images
+
+```python
+X_train = X_train[..., np.newaxis]
+X_test = X_test[..., np.newaxis]
+```
+
+The original images have shape `(number of images, 28, 28)`. A CNN expects a channel dimension too, so these lines make the shape:
+
+```text
+(number of images, 28, 28, 1)
+```
+
+- `...` keeps all existing dimensions.
+- `np.newaxis` adds a dimension at the end.
+- `1` represents the single grayscale channel.
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the digit classes: 10.
+- `Sequential([...])` arranges the layers in order.
+- `Input(shape=X_train.shape[1:])` sets the input shape to `(28, 28, 1)`, excluding the number of images.
+- `Conv2D(32, (3, 3), ...)` learns 32 filters, each scanning a 3 × 3 area.
+- `MaxPooling2D((2, 2))` reduces each feature map by selecting the largest value in each 2 × 2 region.
+- The second `Conv2D` learns 64 filters for more complex patterns.
+- The second pooling layer reduces the feature maps again.
+- `Flatten()` turns the maps into a one-dimensional list.
+- `Dense(128, ...)` combines the learned features using 128 neurons.
+- `Dense(num_classes, ...)` creates 10 outputs, one for each digit.
+- `activation="relu"` changes negative values to zero and keeps positive values.
+- `activation="softmax"` converts output scores into probabilities for the digit classes.
+
+## Step 5: Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights.
+- `loss="sparse_categorical_crossentropy"` measures how different predictions are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is appropriate because the labels are integers, such as `5`, rather than one-hot vectors.
+
+## Step 6: Train the model
+
+```python
+history = model.fit(
+    X_train, y_train,
+    epochs=10,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+- `model.fit(...)` trains the model using the training images and labels.
+- `epochs=10` means it goes through the training data 10 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `validation_split=0.1` reserves 10% of the training data to evaluate progress during training. These images are not used to update the weights.
+- `verbose=0` hides training progress messages.
+- `history` stores the training and validation results for every epoch.
+
+## Step 7: Plot accuracy and loss
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a figure 12 inches wide and 4 inches high.
+
+### Accuracy graph
+
+```python
+plt.subplot(1, 2, 1)
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+```
+
+- `plt.subplot(1, 2, 1)` selects the first graph in a layout of one row and two columns.
+- `history.history["accuracy"]` gives the training accuracy from each epoch.
+- `history.history["val_accuracy"]` gives the validation accuracy from each epoch.
+- `label` names each line.
+- The remaining lines add the title, axis labels, and legend.
+
+### Loss graph
+
+```python
+plt.subplot(1, 2, 2)
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+```
+
+- `plt.subplot(1, 2, 2)` selects the second graph.
+- `"loss"` contains training loss values; `"val_loss"` contains validation loss values.
+- The remaining commands label the graph and its lines.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `plt.tight_layout()` adjusts spacing so the graphs and labels fit.
+- `plt.show()` displays the figure.
+
+## How to interpret your graphs
+
+- **Accuracy:** Training accuracy rises from about 94% to almost 100%. Validation accuracy stays around 98–99%.
+- **Training loss:** It drops steadily from about 0.22 to close to 0.
+- **Validation loss:** It drops at first, then fluctuates around 0.04. Small changes between epochs are normal.
+- The model performs very well on both the training and validation data.
+- The displayed graphs do not show test accuracy. This code creates a test set with `mnist.load_data()`, but it does not evaluate or plot results for that set.
+- The x-axis shows positions 0–9 for the 10 recorded epochs; these correspond to epochs 1–10.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| CNN | A neural network that learns patterns from images |
+| Convolution | Applying learned filters to image regions |
+| Max pooling | Reducing feature-map size while keeping strong values |
+| Validation data | Held-aside data used to check progress during training |
+| Training accuracy | Fraction of training examples classified correctly |
+| Validation accuracy | Fraction of validation examples classified correctly |
+| Loss | A measure of prediction error |
+| `history` | Stores metrics recorded during training |
+
+## One-minute explanation for the external examiner
+
+> This practical trains a CNN to classify handwritten MNIST digits. The images are loaded, converted to decimal values, and normalized from 0 to 1. A channel dimension is added because a CNN expects height, width, and channel dimensions. The model has two convolution and max-pooling stages to learn image features, followed by Flatten and Dense layers that classify the digits from 0 to 9. It is trained for 10 epochs, with 10% of the training data reserved for validation. The graphs show training and validation accuracy increasing while loss generally decreases.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To train a CNN for handwritten digit classification and plot its training and validation accuracy and loss.
+
+2. **What is MNIST?**  
+   A dataset of handwritten digit images labelled from 0 to 9.
+
+3. **What is a CNN?**  
+   A neural network that learns patterns from images using convolution layers.
+
+4. **What does a convolution layer do?**  
+   It applies learned filters to image areas to detect patterns such as edges and curves.
+
+5. **What is a filter in a CNN?**  
+   A learned set of values that scans image regions to detect patterns.
+
+6. **What does max pooling do?**  
+   It reduces feature-map size by keeping the largest value in each region.
+
+7. **Why add a channel dimension to the images?**  
+   CNN input includes height, width, and channels. A grayscale image has one channel.
+
+8. **What does `np.newaxis` do?**  
+   It adds the grayscale channel dimension to the image arrays.
+
+9. **What does `Flatten()` do?**  
+   It converts feature maps into a one-dimensional list for the Dense layers.
+
+10. **What does ReLU do?**  
+    It changes negative values to zero and keeps positive values.
+
+11. **What does Softmax do?**  
+    It converts output scores into probabilities for the 10 digit classes.
+
+12. **Why normalize pixel values?**  
+    To scale them from 0–255 to 0–1, which helps model training.
+
+13. **What is an epoch?**  
+    One complete pass through the training data.
+
+14. **What does `batch_size=128` mean?**  
+    The model processes up to 128 images before updating its weights.
+
+15. **What does `validation_split=0.1` mean?**  
+    Ten percent of the training data is reserved for validation.
+
+16. **Are validation images used to update the weights?**  
+    No. They are used to measure performance during training.
+
+17. **What is the difference between accuracy and loss?**  
+    Accuracy is the fraction of correct predictions; loss measures prediction error.
+
+18. **What does a decreasing loss curve usually show?**  
+    The model’s predictions are getting closer to the correct labels.
+
+19. **Why might validation loss go up slightly between epochs?**  
+    Small fluctuations are normal; a sustained increase while training loss falls can suggest overfitting.
+
+20. **Does this code calculate test accuracy?**  
+    No. It plots training and validation metrics only. A separate `model.evaluate(X_test, y_test)` call is needed to report test accuracy.

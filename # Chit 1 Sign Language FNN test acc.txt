@@ -1,0 +1,1280 @@
+# Chit 1: Sign Language FNN: test accuracy
+
+1. Develop a Feedforward Neural Network using TensorFlow/Keras to classify American Sign Language alphabet gestures using the Sign Language MNIST dataset. Normalize the pixel values, flatten the images, train the model using Dense layers and display the test accuracy. 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+print("Training Dataset Shape:", train_df.shape)
+print("Testing Dataset Shape:", test_df.shape)
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+# Display model architecture
+model.summary()
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 1: Feedforward Neural Network (FNN) for Sign Language MNIST Classification
+
+**Subject:** Deep Learning  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+Let's understand this practical from the basics, including every important line of code, its purpose, and questions an external examiner might ask.
+
+---
+
+# 1. Aim of the Practical
+
+To develop a **Feedforward Neural Network (FNN)** using TensorFlow/Keras to classify American Sign Language alphabet gestures using the Sign Language MNIST dataset.
+
+The program performs the following tasks:
+
+1. Load the Sign Language MNIST dataset.
+2. Normalize pixel values between 0 and 1.
+3. Flatten 28 × 28 images into 784 features.
+4. Build a Feedforward Neural Network using Dense layers.
+5. Train the model using the Adam optimizer.
+6. Evaluate the model and display test accuracy.
+
+# 2. First Understand the Basic Concepts
+
+Before understanding the code, let's understand some important terms.
+
+### Q1. What is Deep Learning?
+
+Deep Learning is a part of Machine Learning that uses artificial neural networks to learn from data and make predictions.
+
+Example: Recognizing handwritten digits, identifying objects and recognizing sign language.
+
+### Q2. What is a Feedforward Neural Network (FNN)?
+
+A Feedforward Neural Network is an artificial neural network in which information moves in only one direction:
+
+**Input Layer → Hidden Layers → Output Layer**
+
+- Input Layer: Accepts the input data.
+- Hidden Layers: Learn patterns from the input.
+- Output Layer: Produces the final prediction.
+
+There are no feedback connections or loops.
+
+### Q3. What is Sign Language MNIST?
+
+Sign Language MNIST is a dataset containing images of American Sign Language hand gestures.
+
+- Image size: 28 × 28 pixels.
+- Each image represents a hand gesture.
+- Used for alphabet gesture classification.
+- Contains 24 classes.
+
+**Important:** The dataset contains 24 classes because the letters J and Z require movement, which cannot be represented properly using a single static image.
+
+### Q4. What is TensorFlow?
+
+TensorFlow is an open-source library developed by Google for Machine Learning and Deep Learning.
+
+It helps us build, train and evaluate neural networks.
+
+### Q5. What is Keras?
+
+Keras is a high-level Deep Learning API used to build neural networks easily.
+
+It provides functions such as:
+- Sequential()
+- Dense()
+- compile()
+- fit()
+- evaluate()
+
+---
+
+# 3. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+```
+
+Let's understand each line.
+
+### 1. `import numpy as np`
+
+- `import` – Used to include a library in our program.
+- `numpy` – Python library used for numerical calculations and working with arrays.
+- `as np` – Gives NumPy a short name, `np`.
+
+**Why do we use NumPy?**
+
+To perform numerical operations and manipulate image data in array format.
+
+### 2. `import tensorflow as tf`
+
+- `tensorflow` – Deep Learning library.
+- `as tf` – Gives TensorFlow a short name, `tf`.
+
+**Why do we use TensorFlow?**
+
+To create, train and evaluate our neural network.
+
+### 3. `from tensorflow.keras import Sequential`
+
+- `from` – Specifies where to import something from.
+- `tensorflow.keras` – Keras API inside TensorFlow.
+- `Sequential` – Used to create a neural network by adding layers one after another.
+
+**Why do we use Sequential?**
+
+Because our neural network has a simple, linear structure of layers.
+
+### 4. `from tensorflow.keras.layers import Input, Dense`
+
+We import two layers.
+
+**Input:**
+- Defines the shape of input data.
+- Tells the model how many input features it will receive.
+
+**Dense:**
+- Creates a fully connected neural network layer.
+- Every neuron connects to all neurons in the previous layer.
+
+### 5. `import pandas as pd`
+
+- `pandas` – Library used for reading and handling datasets.
+- `as pd` – Short name for Pandas.
+
+**Why do we use Pandas?**
+
+To load CSV files and handle tabular data.
+
+### 6. `from sklearn.preprocessing import LabelEncoder`
+
+- `sklearn` – Scikit-learn Machine Learning library.
+- `preprocessing` – Module used to prepare data.
+- `LabelEncoder` – Converts categorical labels into numerical values.
+
+**Why do we use LabelEncoder?**
+
+To encode the output labels into numerical class values.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+### Explanation
+
+**First line:**
+
+`train_df = pd.read_csv("sign_mnist_train.csv")`
+
+- `train_df` – Variable storing training data.
+- `pd.read_csv()` – Function used to read a CSV file.
+- `"sign_mnist_train.csv"` – Training dataset file.
+
+**Second line:**
+
+`test_df = pd.read_csv("sign_mnist_test.csv")`
+
+Loads the testing dataset into the variable `test_df`.
+
+### What is Training Data?
+
+Training data is the data used by the neural network to learn patterns.
+
+### What is Testing Data?
+
+Testing data is used to check how accurately the trained model predicts unseen images.
+
+**Remember:**
+
+- Training data → Used for learning.
+- Testing data → Used for evaluation.
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+These two lines perform three important operations:
+
+1. Remove the label column.
+2. Convert the data into NumPy arrays.
+3. Normalize pixel values.
+
+Let's understand the first line.
+
+### `train_df.drop(columns="label")`
+
+- `drop()` – Removes a particular column or row.
+- `columns="label"` – Specifies that the label column should be removed.
+
+Why?
+
+Because the label column contains the correct alphabet class, not the image pixel values.
+
+We store image data separately from its labels.
+
+### `.to_numpy(dtype="float32")`
+
+- `to_numpy()` – Converts Pandas data into a NumPy array.
+- `dtype` – Specifies the data type.
+- `float32` – Stores numbers as 32-bit floating-point values.
+
+Why?
+
+Neural networks commonly work with floating-point numbers.
+
+### `/ 255.0`
+
+This performs **Normalization**.
+
+Original image pixel values range from:
+
+- Minimum = 0
+- Maximum = 255
+
+After dividing by 255:
+
+- Minimum = 0
+- Maximum = 1
+
+Example:
+
+| Original Pixel | Normalized Value |
+|---:|---:|
+| 0 | 0.0 |
+| 50 | 0.196 |
+| 128 | 0.502 |
+| 255 | 1.0 |
+
+**Why is normalization important?**
+
+- Makes values smaller and consistent.
+- Helps the model learn efficiently.
+- Improves numerical stability during training.
+
+The same operations are performed on testing data.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+This code converts output labels into numerical class values.
+
+### 1. `encoder = LabelEncoder()`
+
+Creates an object of the LabelEncoder class.
+
+### 2. `encoder.fit_transform(train_df["label"])`
+
+This function performs two operations:
+
+- `fit()` – Learns the unique classes present in the training labels.
+- `transform()` – Converts those classes into numerical values.
+
+For example:
+
+Suppose the labels are:
+
+```text
+[0, 1, 2, 3]
+```
+
+They will be encoded as:
+
+```text
+[0, 1, 2, 3]
+```
+
+In this dataset, the original labels are already numerical, but LabelEncoder ensures they are mapped to consecutive class indices.
+
+### 3. `encoder.transform(test_df["label"])`
+
+Converts testing labels using the same mapping learned from training data.
+
+**Important viva point:**
+
+Why do we use `transform()` instead of `fit_transform()` for testing data?
+
+Because the testing data must use the same class mapping as the training data.
+
+We should not independently learn a new mapping from the test data.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+This line converts numerical class labels into alphabet characters.
+
+Let's break it down.
+
+- `class_names` – Stores alphabet names.
+- `encoder.classes_` – Returns the unique classes learned by LabelEncoder.
+- `int(label)` – Converts the label into an integer.
+- `+ 65` – Adds 65 to get the ASCII value of the corresponding uppercase alphabet.
+- `chr()` – Converts an ASCII value into a character.
+
+Example:
+
+| Label | ASCII Value | Alphabet |
+|---:|---:|---|
+| 0 | 65 | A |
+| 1 | 66 | B |
+| 2 | 67 | C |
+| 3 | 68 | D |
+
+Therefore, this line converts numerical labels into alphabet characters.
+
+**What is ASCII?**
+
+ASCII is a character encoding system that assigns numerical values to characters.
+
+For example:
+- A = 65
+- B = 66
+- C = 67
+
+Note: The dataset's original class labels are not necessarily consecutive alphabet positions. This code maps the encoded class indices to letters, so the mapping is based on sorted class order.
+
+### Next Code
+
+```python
+image_shape = (28, 28, 1)
+```
+
+This defines the image dimensions.
+
+- `28` – Image height.
+- `28` – Image width.
+- `1` – Number of colour channels.
+
+Why is the number of channels 1?
+
+Because the images are grayscale images.
+
+**Note:** This variable is defined but is not actually used later in this FNN code.
+
+---
+
+# Step 3: Flatten the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+This is a very important step.
+
+### What is Flattening?
+
+Flattening means converting a two-dimensional image into a one-dimensional array.
+
+Original image:
+
+```text
+28 × 28 = 784 pixels
+```
+
+After flattening:
+
+```text
+[ pixel1, pixel2, pixel3, ... pixel784 ]
+```
+
+### Understanding `reshape()`
+
+`reshape()` changes the shape of an array without changing its actual data.
+
+In:
+
+```python
+X_train.reshape(-1, 28, 28)
+```
+
+- `reshape()` – Changes array dimensions.
+- `-1` – Automatically calculates the number of images.
+- `28` – Height.
+- `28` – Width.
+
+Then:
+
+```python
+.reshape(-1, 784)
+```
+
+Converts each 28 × 28 image into a 784-element vector.
+
+Why 784?
+
+Because:
+
+28 × 28 = 784.
+
+### Why do we flatten images?
+
+Our Feedforward Neural Network uses Dense layers.
+
+Dense layers expect one-dimensional feature vectors for each sample, so we convert each image into 784 input features.
+
+**Important viva point:**
+
+Flattening does not remove image pixels. It only changes the arrangement of the data.
+
+---
+
+# Step 4: Build the Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates our Feedforward Neural Network.
+
+### 1. `num_classes = len(class_names)`
+
+- `len()` – Returns the number of elements.
+- `class_names` – Contains the alphabet classes.
+
+Therefore, `num_classes` stores the total number of output classes.
+
+In this dataset:
+
+```text
+num_classes = 24
+```
+
+### 2. `model = Sequential([...])`
+
+Creates a Sequential Neural Network.
+
+Sequential means layers are arranged one after another.
+
+Our model contains:
+
+1. Input Layer
+2. First Hidden Layer
+3. Second Hidden Layer
+4. Output Layer
+
+### Understanding Each Layer
+
+**Layer 1: Input Layer**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- `Input` – Defines the input layer.
+- `shape` – Specifies the input dimensions.
+- `X_train.shape[1]` – Returns the number of features.
+- `784` – Number of input features.
+
+Therefore, the model accepts 784 input values for each image.
+
+**Layer 2: First Hidden Layer**
+
+```python
+Dense(256, activation="relu")
+```
+
+- `Dense` – Fully connected layer.
+- `256` – Number of neurons.
+- `activation` – Specifies the activation function.
+- `relu` – Rectified Linear Unit.
+
+### What is ReLU?
+
+ReLU is an activation function that converts negative values into zero and keeps positive values unchanged.
+
+Formula:
+
+```text
+f(x) = max(0, x)
+```
+
+Example:
+
+| Input | ReLU Output |
+|---:|---:|
+| -5 | 0 |
+| -2 | 0 |
+| 0 | 0 |
+| 3 | 3 |
+| 8 | 8 |
+
+**Why do we use ReLU?**
+
+It introduces non-linearity into the neural network and helps it learn complex patterns.
+
+**Layer 3: Second Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Dense layer with 128 neurons.
+- Uses ReLU activation.
+- Learns additional patterns from the previous layer.
+
+**Layer 4: Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+Since:
+
+```text
+num_classes = 24
+```
+
+The output layer contains 24 neurons.
+
+### What is Softmax?
+
+Softmax is an activation function that converts output values into probabilities.
+
+For example:
+
+```text
+A = 0.10
+B = 0.70
+C = 0.05
+D = 0.15
+```
+
+The model predicts the class with the highest probability.
+
+Here, B is predicted because it has the highest probability.
+
+**Why do we use Softmax?**
+
+Because this is a multi-class classification problem, where the model must select one class from 24 possible classes.
+
+### Neural Network Architecture
+
+```text
+        INPUT LAYER
+         784 Neurons
+              |
+              |
+       HIDDEN LAYER 1
+         256 Neurons
+         ReLU
+              |
+              |
+       HIDDEN LAYER 2
+         128 Neurons
+         ReLU
+              |
+              |
+        OUTPUT LAYER
+          24 Neurons
+          Softmax
+              |
+              |
+      Predicted Alphabet
+```
+
+---
+
+# Step 5: Compile the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation prepares the model for training.
+
+It defines three important things:
+
+1. Optimizer
+2. Loss function
+3. Evaluation metric
+
+### 1. `optimizer="adam"`
+
+Adam stands for **Adaptive Moment Estimation**.
+
+It is an optimization algorithm used to update neural network weights during training.
+
+**In simple words:**
+
+Adam helps the model reduce its errors and learn better.
+
+### 2. `loss="sparse_categorical_crossentropy"`
+
+Loss function measures the difference between the actual output and predicted output.
+
+Sparse categorical crossentropy is used when:
+
+- We have multiple classes.
+- Target labels are represented as integers.
+
+Example:
+
+```text
+Actual class = 2
+Predicted class = 3
+```
+
+The loss function measures how incorrect the prediction is.
+
+**Why sparse categorical crossentropy?**
+
+Because our dataset contains 24 classes and the labels are integer encoded, not one-hot encoded.
+
+### 3. `metrics=["accuracy"]`
+
+Accuracy measures how many predictions are correct.
+
+Formula:
+
+Accuracy = (Correct Predictions / Total Predictions) × 100
+
+Example:
+
+If 80 predictions are correct out of 100:
+
+Accuracy = 80%.
+
+---
+
+# Step 6: Display Model Architecture
+
+### Code
+
+```python
+model.summary()
+```
+
+This displays the complete architecture of our neural network.
+
+### Understanding Your Output
+
+Your output:
+
+| Layer | Output Shape | Parameters |
+|---|---|---:|
+| Dense | (None, 256) | 200,960 |
+| Dense_1 | (None, 128) | 32,896 |
+| Dense_2 | (None, 24) | 3,096 |
+
+Let's understand it.
+
+**What is Output Shape?**
+
+It represents the shape of the output produced by each layer.
+
+- `(None, 256)` – 256 output values for each image.
+- `(None, 128)` – 128 output values.
+- `(None, 24)` – 24 class probabilities.
+
+What does `None` mean?
+
+It represents the batch size, which can vary.
+
+### What are Parameters?
+
+Parameters are weights and biases that the neural network learns during training.
+
+For a Dense layer:
+
+Parameters = (Input Neurons × Output Neurons) + Output Neurons
+
+Let's calculate.
+
+**First Dense Layer:**
+
+(784 × 256) + 256
+
+= 200,704 + 256
+
+= **200,960**
+
+**Second Dense Layer:**
+
+(256 × 128) + 128
+
+= 32,768 + 128
+
+= **32,896**
+
+**Third Dense Layer:**
+
+(128 × 24) + 24
+
+= 3,072 + 24
+
+= **3,096**
+
+### Total Parameters
+
+200,960 + 32,896 + 3,096
+
+= **236,952**
+
+Your model summary is correct.
+
+- Total parameters: 236,952
+- Trainable parameters: 236,952
+- Non-trainable parameters: 0
+
+**What are Trainable Parameters?**
+
+Weights and biases that are updated during model training.
+
+**What are Non-trainable Parameters?**
+
+Parameters that remain fixed and are not updated during training.
+
+---
+
+# Step 7: Train the Model
+
+### Code
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This line trains our neural network using training data.
+
+Let's understand each parameter.
+
+### `model.fit()`
+
+- `fit()` – Function used to train the neural network.
+- `X_train` – Training images.
+- `y_train` – Correct labels of training images.
+
+### `epochs=15`
+
+An epoch means one complete pass through the entire training dataset.
+
+Here, the model processes the complete training dataset 15 times.
+
+**Why do we use multiple epochs?**
+
+To allow the model to learn patterns gradually and improve its predictions.
+
+### `batch_size=128`
+
+Batch size means the number of training samples processed together before updating the model's weights.
+
+Here, the model processes 128 images in one batch.
+
+### `verbose=0`
+
+Controls the training progress display.
+
+- `verbose=0` – No progress output.
+- `verbose=1` – Displays progress bar.
+- `verbose=2` – Displays one line per epoch.
+
+### What happens during training?
+
+1. Model receives training images.
+2. It makes predictions.
+3. Predictions are compared with actual labels.
+4. Loss is calculated.
+5. Adam optimizer updates weights.
+6. This process repeats for 15 epochs.
+
+**Important:** The output:
+
+```text
+<keras.src.callbacks.history.History at ...>
+```
+
+is not an error.
+
+It is the History object returned by `model.fit()`, which stores training information such as loss and accuracy.
+
+---
+
+# Step 8: Evaluate the Model on Test Data
+
+### Code
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This line evaluates the trained model using testing data.
+
+### Understanding `model.evaluate()`
+
+- `model` – Our trained neural network.
+- `evaluate()` – Evaluates the model's performance.
+- `X_test` – Testing images.
+- `y_test` – Actual testing labels.
+- `verbose=0` – Hides evaluation progress.
+
+### What does `_` mean?
+
+The evaluation function returns two values:
+
+1. Loss
+2. Accuracy
+
+The underscore `_` is used when we want to ignore a returned value.
+
+Therefore:
+
+```python
+_, test_accuracy
+```
+
+means:
+- Ignore the loss value.
+- Store the accuracy value in `test_accuracy`.
+
+### Next Code
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+This displays the testing accuracy.
+
+- `print()` – Displays output.
+- `f` – Creates an f-string.
+- `test_accuracy * 100` – Converts accuracy into percentage.
+- `:.2f` – Displays the value up to two decimal places.
+- `%` – Displays the percentage symbol.
+
+---
+
+# 4. Output Explanation
+
+Your final output:
+
+```text
+Testing accuracy: 77.41%
+```
+
+### What does this mean?
+
+It means that the trained Feedforward Neural Network correctly classified approximately **77.41% of the testing images**.
+
+For example, if we test 100 images, approximately 77 images will be classified correctly.
+
+The remaining images may be incorrectly classified.
+
+**Conclusion:**
+
+The Feedforward Neural Network successfully classifies American Sign Language alphabet gestures using the Sign Language MNIST dataset and achieves a test accuracy of 77.41%.
+
+---
+
+# 5. Important Warning in Your Output
+
+You received this warning:
+
+```text
+WARNING:tensorflow:TensorFlow GPU support is not available
+on native Windows for TensorFlow >= 2.11.
+```
+
+### Is this an error?
+
+No. It is only a warning.
+
+It means TensorFlow is not using GPU acceleration in your native Windows environment.
+
+The program can still execute using the CPU.
+
+**Viva question: Why is GPU used in Deep Learning?**
+
+GPU performs many mathematical operations simultaneously, making neural network training faster.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 6. Important External Viva Questions and Answers
+
+These are the questions you should prepare for this practical.
+
+## A. Basic Deep Learning Questions
+
+**Q1. What is Deep Learning?**
+
+Deep Learning is a branch of Machine Learning that uses artificial neural networks to learn patterns from data.
+
+**Q2. What is an Artificial Neural Network?**
+
+An Artificial Neural Network is a computing model inspired by the working of the human brain. It consists of interconnected neurons.
+
+**Q3. What is a Feedforward Neural Network?**
+
+It is a neural network in which information flows in one direction, from input to output.
+
+**Q4. What are the layers in FNN?**
+
+1. Input layer
+2. Hidden layer
+3. Output layer
+
+**Q5. What is a neuron?**
+
+A neuron is the basic processing unit of a neural network that receives inputs, performs calculations and produces an output.
+
+**Q6. What is a Dense layer?**
+
+A Dense layer is a fully connected layer in which every neuron is connected to all neurons in the previous layer.
+
+**Q7. What is an epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**Q8. What is batch size?**
+
+Batch size is the number of samples processed together before updating the model weights.
+
+**Q9. What is an activation function?**
+
+An activation function determines the output of a neuron and introduces non-linearity into the network.
+
+**Q10. What is the difference between ReLU and Softmax?**
+
+| ReLU | Softmax |
+|---|---|
+| Used mainly in hidden layers. | Commonly used in output layer for multi-class classification. |
+| Converts negative values to zero. | Converts output values into probabilities. |
+| Introduces non-linearity. | Helps select the most probable class. |
+
+## B. Dataset and Preprocessing Questions
+
+**Q11. What is the Sign Language MNIST dataset?**
+
+It is a dataset containing grayscale images of American Sign Language hand gestures used for alphabet classification.
+
+**Q12. What is the size of each image?**
+
+28 × 28 pixels.
+
+**Q13. Why are there 24 classes instead of 26?**
+
+Because J and Z require movement and cannot be represented properly using static images.
+
+**Q14. What is normalization?**
+
+Normalization is the process of converting data values into a common range, generally between 0 and 1.
+
+**Q15. Why do we divide pixel values by 255?**
+
+Because grayscale pixel values range from 0 to 255. Dividing by 255 converts them into values between 0 and 1.
+
+**Q16. What is flattening?**
+
+Flattening converts a 2D image into a 1D array.
+
+**Q17. Why do we flatten the images?**
+
+Because Dense layers require one-dimensional feature vectors for each input sample.
+
+**Q18. What is LabelEncoder?**
+
+LabelEncoder is a Scikit-learn preprocessing tool that converts categorical labels into numerical values.
+
+**Q19. Why do we use Pandas?**
+
+To read and handle CSV datasets.
+
+**Q20. Why do we use NumPy?**
+
+To perform numerical operations and manipulate arrays.
+
+## C. Model and Activation Function Questions
+
+**Q21. How many layers are used in your model?**
+
+Three Dense layers and one explicitly defined Input layer.
+
+**Q22. How many neurons are present in the first hidden layer?**
+
+256 neurons.
+
+**Q23. How many neurons are present in the second hidden layer?**
+
+128 neurons.
+
+**Q24. How many neurons are present in the output layer?**
+
+24 neurons.
+
+**Q25. Why do we use ReLU?**
+
+ReLU converts negative values into zero and introduces non-linearity, helping the network learn complex patterns.
+
+**Q26. Why do we use Softmax?**
+
+To convert output values into probabilities for 24 classes.
+
+**Q27. What is the difference between Sigmoid and Softmax?**
+
+- Sigmoid: Commonly used for binary classification.
+- Softmax: Commonly used for multi-class classification.
+
+**Q28. What is the Sequential model?**
+
+It is a Keras model that allows us to create a neural network by stacking layers one after another.
+
+## D. Training and Evaluation Questions
+
+**Q29. What is an optimizer?**
+
+An optimizer updates the weights of a neural network to reduce the loss.
+
+**Q30. Which optimizer is used in your practical?**
+
+Adam optimizer.
+
+**Q31. What is Adam?**
+
+Adam stands for Adaptive Moment Estimation. It is an optimization algorithm used to update model weights efficiently.
+
+**Q32. What is a loss function?**
+
+A loss function measures the difference between actual and predicted outputs.
+
+**Q33. Which loss function is used in your practical?**
+
+Sparse Categorical Crossentropy.
+
+**Q34. Why do we use Sparse Categorical Crossentropy?**
+
+Because we have multiple classes and our target labels are represented as integers.
+
+**Q35. What is accuracy?**
+
+Accuracy is the percentage of correctly predicted samples out of total samples.
+
+**Q36. What is the difference between training accuracy and testing accuracy?**
+
+- Training accuracy: Accuracy measured on training data.
+- Testing accuracy: Accuracy measured on unseen testing data.
+
+**Q37. What is overfitting?**
+
+Overfitting occurs when a model performs very well on training data but poorly on unseen testing data.
+
+**Q38. What is underfitting?**
+
+Underfitting occurs when a model fails to learn important patterns from the training data.
+
+**Q39. What is GPU?**
+
+GPU stands for Graphics Processing Unit. It helps perform parallel calculations and speeds up Deep Learning operations.
+
+**Q40. What is the accuracy achieved in your practical?**
+
+77.41%.
+
+---
+
+# 7. Important Code Functions – Quick Revision
+
+| Function / Keyword | Purpose |
+|---|---|
+| `pd.read_csv()` | Reads CSV files |
+| `drop()` | Removes a column |
+| `to_numpy()` | Converts data into NumPy array |
+| `LabelEncoder()` | Creates label encoder |
+| `fit_transform()` | Learns and transforms labels |
+| `transform()` | Transforms labels using an existing mapping |
+| `reshape()` | Changes array dimensions |
+| `Sequential()` | Creates a sequential neural network |
+| `Input()` | Defines input shape |
+| `Dense()` | Creates a fully connected layer |
+| `relu` | Activation function for hidden layers |
+| `softmax` | Converts outputs into probabilities |
+| `compile()` | Configures the model |
+| `adam` | Optimizer |
+| `sparse_categorical_crossentropy` | Loss function |
+| `summary()` | Displays model architecture |
+| `fit()` | Trains the model |
+| `evaluate()` | Evaluates model performance |
+| `len()` | Returns number of elements |
+| `chr()` | Converts ASCII value into character |
+
+---
+
+# 8. Last-Minute Practical Revision
+
+If the external asks you to explain your practical in 1–2 minutes, remember this sequence:
+
+| Step | What happens? |
+|---|---|
+| 1. Import | Import TensorFlow, Keras, NumPy, Pandas and LabelEncoder. |
+| 2. Load Dataset | Load training and testing CSV files. |
+| 3. Normalize | Divide pixel values by 255. |
+| 4. Encode Labels | Convert labels into numerical class indices. |
+| 5. Flatten | Convert 28 × 28 images into 784 features. |
+| 6. Build Model | Create Dense layers with 256, 128 and 24 neurons. |
+| 7. Compile | Use Adam, Sparse Categorical Crossentropy and Accuracy. |
+| 8. Train | Train for 15 epochs with batch size 128. |
+| 9. Evaluate | Evaluate the model on testing data. |
+| 10. Result | Display test accuracy of 77.41%. |
+
+### Most Important Things to Remember for the External
+
+1. Image size = **28 × 28**
+2. Input features = **784**
+3. Number of classes = **24**
+4. Hidden layer 1 = **256 neurons**
+5. Hidden layer 2 = **128 neurons**
+6. Output layer = **24 neurons**
+7. Hidden activation = **ReLU**
+8. Output activation = **Softmax**
+9. Optimizer = **Adam**
+10. Loss = **Sparse Categorical Crossentropy**
+11. Epochs = **15**
+12. Batch size = **128**
+13. Test accuracy = **77.41%**
+

@@ -1,0 +1,1200 @@
+# Chit 3: Sign Language FNN: five actual and predicted labels
+
+3. Develop an FNN model to classify grayscale hand gesture images into their corresponding alphabet classes. Display any five test images along with their actual and predicted alphabet labels. 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+# Step 7: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+
+# Step 8: Show five examples
+plt.figure(figsize=(14, 4))
+
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+
+    plt.subplot(1, 5, i + 1)
+
+    if image_shape[-1] == 1:
+        plt.imshow(image.squeeze(), cmap="gray")
+    else:
+        plt.imshow(image)
+
+    plt.title(
+        f"Actual: {class_names[int(y_test[i])]}\n"
+        f"Predicted: {class_names[int(y_pred[i])]}"
+    )
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 3: Feedforward Neural Network for Sign Language Alphabet Recognition – Display Actual and Predicted Labels
+
+**Subject:** Deep Learning  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+## 1. Aim of the Practical
+
+To develop a Feedforward Neural Network (FNN) model to classify grayscale hand gesture images into their corresponding alphabet classes and display five test images along with their actual and predicted alphabet labels.
+
+## 2. Understanding the Practical
+
+In this practical, we train a neural network to recognize American Sign Language alphabet gestures.
+
+After training, we give testing images to the model.
+
+The model predicts which alphabet each image represents.
+
+Finally, we display five test images with:
+- Actual alphabet label.
+- Predicted alphabet label.
+
+### Expected Output
+
+Your output displays five images:
+
+| Image | Actual Label | Predicted Label | Result |
+|---|---|---|---|
+| 1 | G | G | Correct |
+| 2 | F | F | Correct |
+| 3 | K | K | Correct |
+| 4 | A | A | Correct |
+| 5 | D | D | Correct |
+
+All five displayed predictions are correct.
+
+**Important:** This does not mean the entire testing dataset has 100% accuracy. It means only these five displayed predictions are correct.
+
+---
+
+# 3. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+Let's understand each line.
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical calculations and array operations. |
+| `import tensorflow as tf` | Imports TensorFlow for Deep Learning. |
+| `Sequential` | Used to create a neural network layer by layer. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `import pandas as pd` | Imports Pandas to read CSV files. |
+| `LabelEncoder` | Converts labels into numerical class indices. |
+| `matplotlib.pyplot as plt` | Used to display images and graphs. |
+
+### Important Viva Question
+
+**Q. Why do we use Matplotlib in this practical?**
+
+We use Matplotlib to display five test images along with their actual and predicted alphabet labels.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**Explanation:**
+
+- `pd.read_csv()` reads CSV files.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+We load two datasets:
+
+1. Training dataset – Used to train the model.
+2. Testing dataset – Used to check model predictions.
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+These lines perform three operations.
+
+**1. `drop(columns="label")`**
+
+Removes the label column from the dataset.
+
+Why?
+
+Because we want to separate image pixels from their actual alphabet labels.
+
+**2. `to_numpy(dtype="float32")`**
+
+Converts the dataset into NumPy arrays with float32 data type.
+
+**3. `/ 255.0`**
+
+Normalizes pixel values between 0 and 1.
+
+Example:
+
+| Original Pixel | Normalized Pixel |
+|---:|---:|
+| 0 | 0.0 |
+| 128 | 0.50 |
+| 255 | 1.0 |
+
+**Why do we normalize?**
+
+To make input values smaller and help the neural network learn efficiently.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+**Line 1:**
+
+Creates an object of LabelEncoder.
+
+**Line 2:**
+
+`fit_transform()` learns the unique classes and converts them into numerical indices.
+
+**Line 3:**
+
+`transform()` converts testing labels using the same mapping.
+
+**Why do we use LabelEncoder?**
+
+To convert alphabet class labels into numerical values that can be used by the neural network.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+This line converts numerical class labels into alphabet characters.
+
+Let's understand:
+
+- `class_names` – Stores alphabet names.
+- `encoder.classes_` – Returns the original unique labels.
+- `int(label)` – Converts the label into an integer.
+- `+ 65` – Adds 65 to get the ASCII value.
+- `chr()` – Converts ASCII value into a character.
+
+Example:
+
+| Numerical Label | Alphabet |
+|---:|---|
+| 0 | A |
+| 1 | B |
+| 2 | C |
+| 3 | D |
+| 4 | E |
+
+**Why do we need class_names?**
+
+Because we want to display alphabet characters instead of numerical class indices.
+
+### Next Code
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image dimensions.
+
+- 28 = Height.
+- 28 = Width.
+- 1 = Grayscale channel.
+
+It tells us that each image is a 28 × 28 grayscale image.
+
+---
+
+## Step 3: Flatten the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+### What is Flattening?
+
+Flattening means converting a 2D image into a 1D array.
+
+Original image:
+
+28 × 28 pixels
+
+After flattening:
+
+784 features.
+
+Because:
+
+28 × 28 = 784.
+
+### Understanding `reshape()`
+
+- `reshape()` changes the dimensions of an array.
+- `-1` automatically calculates the number of images.
+- `28, 28` represents image height and width.
+- `784` represents the total number of pixels.
+
+**Why do we flatten images?**
+
+Because Dense layers expect one-dimensional feature vectors for each input image.
+
+---
+
+## Step 4: Build the Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+### 1. `num_classes = len(class_names)`
+
+- `len()` counts the number of elements.
+- `num_classes` stores the total number of classes.
+
+Here:
+
+```text
+num_classes = 24
+```
+
+### 2. `model = Sequential([...])`
+
+Creates a neural network with layers arranged one after another.
+
+### Understanding the Layers
+
+| Layer | Neurons | Activation |
+|---|---:|---|
+| Input Layer | 784 | None |
+| Hidden Layer 1 | 256 | ReLU |
+| Hidden Layer 2 | 128 | ReLU |
+| Output Layer | 24 | Softmax |
+
+**Input Layer:**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+Accepts 784 input features.
+
+**First Hidden Layer:**
+
+```python
+Dense(256, activation="relu")
+```
+
+Creates 256 neurons using ReLU activation.
+
+**Second Hidden Layer:**
+
+```python
+Dense(128, activation="relu")
+```
+
+Creates 128 neurons using ReLU activation.
+
+**Output Layer:**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+Creates 24 output neurons.
+
+Softmax converts output values into probabilities and helps the model select the most likely alphabet class.
+
+---
+
+## Step 5: Compile the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation prepares the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+### Important Viva Questions
+
+**Q. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q. Which activation function is used?**
+
+ReLU for hidden layers and Softmax for the output layer.
+
+**Q. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+---
+
+## Step 6: Train the Model
+
+### Code
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This line trains the neural network.
+
+Let's understand each parameter.
+
+| Parameter | Explanation |
+|---|---|
+| `model.fit()` | Trains the neural network. |
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=15` | Trains the model for 15 complete passes through the training data. |
+| `batch_size=128` | Processes 128 images together before updating weights. |
+| `verbose=0` | Hides training progress. |
+
+### What happens during training?
+
+1. Training images are given to the model.
+2. The model predicts the output.
+3. Predicted output is compared with actual labels.
+4. Loss is calculated.
+5. Adam optimizer updates the weights.
+6. This process repeats for 15 epochs.
+
+---
+
+# 4. Step 7: Predict Test Images
+
+**This is one of the MOST IMPORTANT parts of Practical 3.**
+
+### Code
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This line predicts the alphabet classes for all testing images.
+
+Let's break it down.
+
+### 1. `model.predict(X_test, verbose=0)`
+
+- `model.predict()` – Makes predictions using the trained model.
+- `X_test` – Contains testing images.
+- `verbose=0` – Hides prediction progress.
+
+**What does predict() return?**
+
+It returns probabilities for all 24 classes for every testing image.
+
+Example:
+
+Suppose the model predicts the following probabilities for one image:
+
+| Alphabet | Probability |
+|---|---:|
+| A | 0.05 |
+| B | 0.10 |
+| C | 0.70 |
+| D | 0.15 |
+
+The highest probability is 0.70, which belongs to C.
+
+### 2. `np.argmax()`
+
+`argmax()` returns the index of the highest value.
+
+Example:
+
+```python
+probabilities = [0.05, 0.10, 0.70, 0.15]
+
+np.argmax(probabilities)
+```
+
+Output:
+
+```text
+2
+```
+
+Because 0.70 is at index 2.
+
+### 3. `axis=1`
+
+Specifies that we should find the highest probability across each row.
+
+In simple language:
+
+- Each row represents one image.
+- Each column represents one alphabet class.
+- `axis=1` finds the predicted class for every image.
+
+### 4. `y_pred`
+
+Stores the predicted numerical class indices.
+
+**Complete meaning of this line:**
+
+The trained model predicts probabilities for testing images, and `np.argmax()` selects the class having the highest probability for each image.
+
+### Important Viva Questions
+
+**Q. What is `model.predict()`?**
+
+It is a function used to predict outputs for new input data.
+
+**Q. What is `argmax()`?**
+
+It returns the index of the maximum value.
+
+**Q. Why do we use `axis=1`?**
+
+To find the highest probability separately for each testing image.
+
+**Q. What is the difference between `fit()` and `predict()`?**
+
+- `fit()` trains the model.
+- `predict()` makes predictions using the trained model.
+
+---
+
+# 5. Step 8: Display Five Test Images
+
+This is the second most important part of this practical.
+
+### Code
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+**Explanation:**
+
+- `plt.figure()` creates a new figure.
+- `figsize` defines the figure size.
+- 14 = Width.
+- 4 = Height.
+
+It creates a figure of size 14 × 4 inches.
+
+### Next Code
+
+```python
+for i in range(5):
+```
+
+Let's understand this carefully.
+
+**What is a for loop?**
+
+A for loop is used to repeat a block of code multiple times.
+
+**`range(5)`**
+
+Generates the numbers:
+
+```text
+0, 1, 2, 3, 4
+```
+
+Therefore, the loop executes five times.
+
+**Why do we use a for loop?**
+
+To display five test images one by one without writing separate code for each image.
+
+### Next Code
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+This line selects an image and restores its original dimensions.
+
+Let's understand:
+
+- `X_test` – Contains all testing images.
+- `[i]` – Selects the current image.
+- `reshape()` – Changes its dimensions.
+- `image_shape` – Represents (28, 28, 1).
+
+Remember:
+
+During model training, images were flattened into 784 features.
+
+Now we convert them back into 28 × 28 × 1 format for displaying.
+
+**Example:**
+
+```text
+Before: 784 values
+
+After: 28 × 28 × 1 image
+```
+
+### Next Code
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+This creates multiple sections for displaying images.
+
+Understanding the parameters:
+
+- `1` = Number of rows.
+- `5` = Number of columns.
+- `i + 1` = Position of the image.
+
+Since we want five images, we create:
+
+```text
+1 Row × 5 Columns
+```
+
+Why `i + 1`?
+
+Because subplot positions start from 1, whereas Python loop indexing starts from 0.
+
+Example:
+
+| Loop Value (i) | Subplot Position (i+1) |
+|---:|---:|
+| 0 | 1 |
+| 1 | 2 |
+| 2 | 3 |
+| 3 | 4 |
+| 4 | 5 |
+
+### Next Code
+
+```python
+if image_shape[-1] == 1:
+    plt.imshow(image.squeeze(), cmap="gray")
+else:
+    plt.imshow(image)
+```
+
+This code displays the image.
+
+Let's understand each part.
+
+**1. `if image_shape[-1] == 1`**
+
+- `if` checks a condition.
+- `image_shape[-1]` selects the last element of image_shape.
+- The last element is 1.
+- `==` checks whether two values are equal.
+
+Here:
+
+```text
+image_shape = (28, 28, 1)
+```
+
+Therefore:
+
+```text
+image_shape[-1] = 1
+```
+
+The condition is true because the image has one channel.
+
+**2. `plt.imshow()`**
+
+Used to display an image.
+
+**3. `image.squeeze()`**
+
+Removes dimensions of size 1.
+
+Before squeeze:
+
+```text
+(28, 28, 1)
+```
+
+After squeeze:
+
+```text
+(28, 28)
+```
+
+Why?
+
+Because Matplotlib can display the grayscale image as a 2D array.
+
+**4. `cmap="gray"`**
+
+- `cmap` means colormap.
+- `"gray"` displays the image in grayscale.
+
+**5. `else`**
+
+If the image has more than one channel, this part executes:
+
+```python
+plt.imshow(image)
+```
+
+It displays the image without applying grayscale conversion.
+
+**Important:** Your dataset contains grayscale images, so the `if` condition executes.
+
+### Next Code
+
+```python
+plt.title(
+    f"Actual: {class_names[int(y_test[i])]} \n"
+    f"Predicted: {class_names[int(y_pred[i])]}"
+)
+```
+
+This is a very important line because it displays the actual and predicted alphabet labels above each image.
+
+Let's understand it.
+
+**1. `plt.title()`**
+
+Displays a title above the image.
+
+**2. `f"Actual: ..."`**
+
+Displays the actual alphabet label.
+
+**3. `y_test[i]`**
+
+Selects the actual numerical label of the current testing image.
+
+**4. `int(y_test[i])`**
+
+Converts the label into an integer.
+
+**5. `class_names[...]`**
+
+Converts the numerical class index into its corresponding alphabet character.
+
+**6. `\n`**
+
+Represents a new line.
+
+It moves the predicted label to the next line.
+
+**7. `y_pred[i]`**
+
+Selects the predicted numerical label for the current image.
+
+**Complete meaning:**
+
+This code displays two things above each image:
+
+- Actual: The correct alphabet.
+- Predicted: The alphabet predicted by the model.
+
+Example:
+
+```text
+Actual: G
+Predicted: G
+```
+
+### Next Code
+
+```python
+plt.axis("off")
+```
+
+This hides the X-axis and Y-axis values around the image.
+
+Why?
+
+Because we only want to display the hand gesture image, not the axis numbers.
+
+### Final Lines
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+**`plt.tight_layout()`**
+
+Automatically adjusts spacing between images and titles to avoid overlapping.
+
+**`plt.show()`**
+
+Displays all five images with their actual and predicted labels.
+
+---
+
+# 6. Output Explanation
+
+Your output displays five grayscale hand gesture images.
+
+Let's understand the output.
+
+| Image | Actual | Predicted | Explanation |
+|---|---|---|---|
+| 1 | G | G | Model correctly identifies G. |
+| 2 | F | F | Model correctly identifies F. |
+| 3 | K | K | Model correctly identifies K. |
+| 4 | A | A | Model correctly identifies A. |
+| 5 | D | D | Model correctly identifies D. |
+
+### What does Actual mean?
+
+Actual represents the correct alphabet label present in the testing dataset.
+
+### What does Predicted mean?
+
+Predicted represents the alphabet identified by the trained neural network.
+
+### How do we know whether prediction is correct?
+
+If:
+
+```text
+Actual = Predicted
+```
+
+The prediction is correct.
+
+If:
+
+```text
+Actual ≠ Predicted
+```
+
+The prediction is incorrect.
+
+### Conclusion
+
+The Feedforward Neural Network successfully classifies grayscale American Sign Language hand gesture images into their corresponding alphabet classes and displays five test images with their actual and predicted labels.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 7. Important External Viva Questions and Answers
+
+These questions cover the complete practical, especially the new prediction and image-display sections.
+
+## A. Basic Practical Questions
+
+**Q1. What is the aim of this practical?**
+
+To develop a Feedforward Neural Network for Sign Language Alphabet Recognition and display five test images with their actual and predicted labels.
+
+**Q2. Which dataset is used?**
+
+Sign Language MNIST dataset.
+
+**Q3. What is the image size?**
+
+28 × 28 pixels.
+
+**Q4. How many classes are present?**
+
+24 classes.
+
+**Q5. What type of images are used?**
+
+Grayscale hand gesture images.
+
+**Q6. What is a Feedforward Neural Network?**
+
+It is a neural network in which information flows in one direction, from input layer to output layer.
+
+**Q7. Which activation functions are used?**
+
+ReLU and Softmax.
+
+**Q8. Which optimizer is used?**
+
+Adam optimizer.
+
+**Q9. Which loss function is used?**
+
+Sparse Categorical Crossentropy.
+
+**Q10. How many epochs are used?**
+
+15 epochs.
+
+## B. Prediction-Based Questions
+
+**Q11. What is prediction in Deep Learning?**
+
+Prediction means using a trained model to identify or classify new input data.
+
+**Q12. Which function is used to predict the output?**
+
+`model.predict()`.
+
+**Q13. What does `model.predict()` return?**
+
+It returns predicted output values, which are probabilities for each class in this practical.
+
+**Q14. What is argmax?**
+
+Argmax returns the index of the maximum value.
+
+**Q15. Why do we use np.argmax()?**
+
+To select the class having the highest predicted probability.
+
+**Q16. Why do we use axis=1?**
+
+To find the maximum probability separately for each image.
+
+**Q17. What is y_pred?**
+
+It stores the predicted class indices for the testing images.
+
+**Q18. What is y_test?**
+
+It stores the actual class indices of the testing images.
+
+**Q19. What is the difference between y_test and y_pred?**
+
+- `y_test` contains actual labels.
+- `y_pred` contains predicted labels.
+
+**Q20. How do you check whether a prediction is correct?**
+
+By comparing the actual label with the predicted label.
+
+## C. Image Display Questions
+
+**Q21. Which library is used to display images?**
+
+Matplotlib.
+
+**Q22. What is `plt.imshow()`?**
+
+It is a function used to display images.
+
+**Q23. What is `plt.figure()`?**
+
+It creates a new figure for displaying images or graphs.
+
+**Q24. What is `plt.subplot()`?**
+
+It divides a figure into multiple sections.
+
+**Q25. What does `plt.subplot(1,5,i+1)` mean?**
+
+It creates one row and five columns and selects the current image position.
+
+**Q26. What is `plt.axis("off")`?**
+
+It hides the X-axis and Y-axis.
+
+**Q27. What is `cmap="gray"`?**
+
+It displays the image using grayscale colors.
+
+**Q28. What is `image.squeeze()`?**
+
+It removes dimensions of size 1 from an array.
+
+**Q29. Why do we use `range(5)`?**
+
+To execute the loop five times and display five images.
+
+**Q30. Why do we use `i+1` in subplot?**
+
+Because subplot positions start from 1, but Python indexing starts from 0.
+
+## D. General Python Questions
+
+**Q31. What is a for loop?**
+
+A for loop repeats a block of code for a specified number of iterations.
+
+**Q32. What is an if-else statement?**
+
+It is a conditional statement used to execute different code depending on whether a condition is true or false.
+
+**Q33. What is `\n`?**
+
+It is a newline character used to move text to the next line.
+
+**Q34. What is `len()`?**
+
+It returns the number of elements in an object.
+
+**Q35. What is `reshape()`?**
+
+It changes the dimensions of an array without changing its data.
+
+**Q36. What is `int()`?**
+
+It converts a value into an integer.
+
+---
+
+# 8. Important Difference Between Practical 1, 2 and 3
+
+All three practicals use almost the same FNN architecture and dataset preprocessing.
+
+The main difference is their final objective.
+
+| Practical | Main Objective | Important Function |
+|---|---|---|
+| Practical 1 | Display test accuracy. | `model.evaluate()` |
+| Practical 2 | Display training/testing accuracy and accuracy/loss graphs. | `history.history`, `plt.plot()` |
+| Practical 3 | Display five images with actual and predicted labels. | `model.predict()`, `np.argmax()`, `plt.imshow()` |
+
+### Common Code in All Three Practicals
+
+1. Import libraries.
+2. Load Sign Language MNIST dataset.
+3. Normalize pixel values.
+4. Encode labels.
+5. Flatten images.
+6. Build FNN.
+7. Compile model.
+8. Train model.
+
+---
+
+# 9. Quick Revision – Practical 3
+
+| Step | Important Code | Purpose |
+|---|---|---|
+| 1 | `import matplotlib.pyplot as plt` | Import Matplotlib |
+| 2 | `pd.read_csv()` | Load dataset |
+| 3 | `/255.0` | Normalize images |
+| 4 | `LabelEncoder()` | Encode labels |
+| 5 | `reshape()` | Flatten images |
+| 6 | `Sequential()` | Create neural network |
+| 7 | `Dense()` | Create fully connected layers |
+| 8 | `model.compile()` | Compile model |
+| 9 | `model.fit()` | Train model |
+| 10 | `model.predict()` | Predict testing images |
+| 11 | `np.argmax()` | Find highest probability class |
+| 12 | `range(5)` | Repeat five times |
+| 13 | `plt.subplot()` | Arrange five images |
+| 14 | `plt.imshow()` | Display images |
+| 15 | `plt.title()` | Display actual and predicted labels |
+| 16 | `plt.axis("off")` | Hide axes |
+| 17 | `plt.show()` | Display final output |
+
+---
+
+# 10. Most Important Things to Remember for External
+
+| Question | Answer |
+|---|---|
+| Dataset | Sign Language MNIST |
+| Image size | 28 × 28 |
+| Image type | Grayscale |
+| Input features | 784 |
+| Number of classes | 24 |
+| Hidden layers | 256 and 128 neurons |
+| Output neurons | 24 |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss | Sparse Categorical Crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Prediction function | `model.predict()` |
+| Maximum value function | `np.argmax()` |
+| Image display function | `plt.imshow()` |
+| Number of images displayed | 5 |
+
+### ⭐ Top 5 Questions You Must Know
+
+1. **What is the purpose of `model.predict()`?**  
+   To predict the output for testing images.
+
+2. **What is the purpose of `np.argmax()`?**  
+   To find the index of the highest probability.
+
+3. **What is the purpose of `plt.imshow()`?**  
+   To display an image.
+
+4. **What is the difference between actual and predicted labels?**  
+   Actual is the correct label; predicted is the label identified by the model.
+
+5. **Why do we use `range(5)`?**  
+   To display five testing images.
+
+---
+
+## Practical 3 – 1-Minute Explanation for External
+
+"We have developed a Feedforward Neural Network using TensorFlow and Keras for American Sign Language alphabet recognition.
+
+First, we loaded the Sign Language MNIST dataset and performed preprocessing by normalizing pixel values, encoding labels and flattening images.
+
+Then, we created a Sequential Neural Network with two hidden Dense layers containing 256 and 128 neurons and an output layer containing 24 neurons.
+
+We compiled the model using Adam optimizer and Sparse Categorical Crossentropy loss function.
+
+After training the model for 15 epochs, we used `model.predict()` to predict the alphabet classes of testing images.
+
+We used `np.argmax()` to find the class having the highest probability.
+
+Finally, using Matplotlib, we displayed five testing images along with their actual and predicted alphabet labels."
+
+---
+
+**Practical 3 preparation complete!**
+
+**Important:** For your viva, give extra attention to `model.predict()`, `np.argmax()`, `axis=1`, `range(5)`, `plt.subplot()`, `plt.imshow()` and `image.squeeze()`. These are the main new concepts introduced in this practical.

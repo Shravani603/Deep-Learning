@@ -1,0 +1,361 @@
+# Chit 19: CIFAR-10 CNN: object classification
+
+19. Develop a CNN model to classify images into ten object categories. Perform image preprocessing, model training and testing, and display the classification accuracy. Use Dataset -  CIFAR-10 
+
+# Step 1: Import the libraries
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.model_selection import train_test_split
+
+
+
+# Step 2: Load and prepare CIFAR-10
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+X = X.reshape(-1, 32, 32, 3) / 255.0
+
+class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+image_shape = (32, 32, 3)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y
+)
+
+
+# Step 3: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 4: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 5: Prepare and run the model
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+
+
+# Step 6: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 19: CIFAR-10 CNN — Object Classification
+
+## Aim
+
+Train a Convolutional Neural Network (CNN) to classify color images into 10 object categories, then evaluate its accuracy on test data.
+
+## How the model works
+
+```text
+32 × 32 × 3 image → Conv2D → MaxPooling2D → Conv2D → MaxPooling2D
+                  → Flatten → Dense(128) → Softmax(10 categories)
+```
+
+The convolution layers learn visual features from the images. The pooling layers reduce the feature-map size, and the Dense layers classify the extracted features.
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.model_selection import train_test_split
+```
+
+- `numpy as np` is used to set the CSV data type.
+- `tensorflow as tf` imports TensorFlow, but `tf` is not directly used in this code.
+- `Sequential` creates a model whose layers run in order.
+- `Input` defines the image shape expected by the model.
+- `Dense` creates fully connected layers.
+- `pandas as pd` reads the CSV file.
+- `Conv2D` learns image features using filters.
+- `MaxPooling2D` reduces the size of feature maps.
+- `Flatten` converts feature maps into a one-dimensional list.
+- `train_test_split` divides data into training and test sets.
+
+The `# Step 1: Import the libraries` comment appears twice in your code; it has no effect on how the program runs.
+
+## Step 2: Load and prepare CIFAR-10
+
+```python
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+```
+
+- `pd.read_csv(...)` reads the CSV file into a table.
+- `"cifar-10.csv"` is the filename.
+- `dtype=np.uint8` reads pixel values as small unsigned integers, suitable for values from 0 to 255.
+
+```python
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+```
+
+- `y` stores the correct class numbers; conventionally, `y` represents labels.
+- `data["label"]` selects the label column.
+- `.to_numpy(dtype="int64")` converts those labels into an integer array.
+- `X` stores the image pixels; conventionally, `X` represents input data.
+- `.drop(columns="label")` removes the label column, leaving the pixels.
+- `.to_numpy(dtype="float32")` converts the pixels to decimal numbers.
+
+```python
+X = X.reshape(-1, 32, 32, 3) / 255.0
+```
+
+- `.reshape(-1, 32, 32, 3)` arranges each image as 32 pixels high, 32 pixels wide, with 3 color channels.
+- `-1` lets Python work out how many images there are.
+- `3` represents the red, green, and blue (RGB) channels.
+- `/ 255.0` normalizes the pixel values from 0–255 to 0–1.
+
+```python
+class_names = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
+image_shape = (32, 32, 3)
+```
+
+- `class_names` maps class numbers 0–9 to object names. The list order must match the dataset’s label numbers.
+- `image_shape` describes a 32 × 32 RGB image. It is not used later in this code.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y
+)
+```
+
+- `train_test_split(...)` divides the data into training and test sets.
+- `X_train`, `y_train` are used to train the model.
+- `X_test`, `y_test` are held aside for evaluation.
+- `test_size=0.2` reserves 20% of the data for testing; 80% is used for training.
+- `stratify=y` keeps the class proportions similar in both sets.
+- No `random_state` is supplied, so the split can differ between runs. This can cause the test accuracy to vary.
+
+## Step 3: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the categories: 10.
+- `Sequential([...])` puts the layers in order.
+- `Input(shape=X_train.shape[1:])` tells the model each image has the shape `(32, 32, 3)`.
+- `Conv2D(32, (3, 3), ...)` learns 32 filters, each looking at a 3 × 3 image region.
+- `MaxPooling2D((2, 2))` reduces each feature map by selecting the largest value in each 2 × 2 region.
+- The second `Conv2D` learns 64 filters for more complex features.
+- The second pooling layer reduces the maps again.
+- `Flatten()` converts the feature maps into a one-dimensional list.
+- `Dense(128, ...)` combines the extracted features using 128 neurons.
+- `Dense(num_classes, ...)` creates 10 output neurons, one for each object category.
+- `activation="relu"` changes negative values to zero and keeps positive values.
+- `activation="softmax"` turns the output scores into probabilities across the 10 classes.
+
+## Step 4: Compile and train
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects how the model updates its weights during learning.
+- `loss="sparse_categorical_crossentropy"` measures how different the predictions are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is appropriate because the labels are class numbers rather than one-hot vectors.
+
+## Step 5: Train the model
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the model on the training images and labels.
+- `epochs=10` means it goes through the training data 10 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides the training progress messages.
+
+## Step 6: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate(...)` checks performance on the test set.
+- It returns loss first and accuracy second.
+- `_` receives the loss, which this line does not use.
+- `test_accuracy` receives the accuracy.
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `print(...)` displays the result.
+- `test_accuracy * 100` converts the accuracy fraction into a percentage.
+- `:.2f` formats the percentage to two decimal places.
+
+## Output interpretation
+
+```text
+Testing accuracy: 60.65%
+```
+
+The model correctly classified **60.65% of the test images**. The result can vary across runs because the training/test split is not fixed with a `random_state`.
+
+CIFAR-10 images are small, color images with varied backgrounds and object appearances, which makes classification more challenging. This model is a basic CNN and has not been tuned to improve its accuracy.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| CIFAR-10 | Dataset with 10 categories of 32 × 32 color images |
+| RGB | Red, green, and blue image channels |
+| Normalization | Scaling pixels from 0–255 to 0–1 |
+| Convolution | Applying learned filters to image regions |
+| Max pooling | Reducing feature-map size while keeping strong values |
+| Flatten | Converting feature maps into a one-dimensional list |
+| `stratify=y` | Preserving class proportions in the split |
+| Test accuracy | Fraction of test images classified correctly |
+
+## One-minute explanation for the external examiner
+
+> This practical classifies CIFAR-10 images using a CNN. The CSV data is loaded, labels are separated from the pixel values, and the images are reshaped into 32 by 32 RGB format. Pixel values are normalized from 0 to 1. The data is split into training and test sets while keeping class proportions similar. The CNN uses two convolution and max-pooling stages to extract features, followed by Flatten and Dense layers with a Softmax output for 10 categories. After 10 epochs of training, the test accuracy is 60.65%.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify CIFAR-10 images into 10 object categories using a CNN.
+
+2. **What is CIFAR-10?**  
+   A dataset of small color images belonging to 10 categories.
+
+3. **What are the 10 CIFAR-10 classes?**  
+   Airplane, automobile, bird, cat, deer, dog, frog, horse, ship, and truck.
+
+4. **What is the size of each image?**  
+   32 × 32 pixels, with 3 color channels.
+
+5. **What do the three color channels represent?**  
+   Red, green, and blue (RGB).
+
+6. **Why normalize pixel values?**  
+   To scale them from 0–255 to 0–1, which helps training.
+
+7. **What does `stratify=y` do?**  
+   It keeps the class proportions similar in the training and test sets.
+
+8. **Why can test accuracy vary between runs in this code?**  
+   Because the random train/test split is not fixed with a `random_state`.
+
+9. **What does a convolution layer do?**  
+   It applies learned filters to image regions to detect patterns.
+
+10. **What is a filter?**  
+    A small set of learned values that scans image regions for a pattern.
+
+11. **What does max pooling do?**  
+    It reduces feature-map size by keeping the largest value in each region.
+
+12. **What does `Flatten()` do?**  
+    It converts feature maps into a one-dimensional list for Dense layers.
+
+13. **Why does this model use Softmax?**  
+    It converts output scores into probabilities for the 10 classes.
+
+14. **Why use sparse categorical cross-entropy?**  
+    It is suitable for multi-class classification when labels are integers.
+
+15. **What is the purpose of `model.evaluate()`?**  
+    To measure model performance on the separate test set.
+
+16. **What does 60.65% test accuracy mean?**  
+    The model classified 60.65% of test images correctly.
+
+17. **Why might CIFAR-10 be harder than MNIST?**  
+    CIFAR-10 images are color images of real objects with varied backgrounds and appearances, while MNIST contains simple grayscale digits.
+
+18. **What does `epochs=10` mean?**  
+    The model goes through the full training data 10 times.
+
+19. **What does `batch_size=128` mean?**  
+    It processes up to 128 images before updating the model’s weights.
+
+20. **How could this model’s performance potentially be improved?**  
+    By tuning the model and training settings, or using data augmentation and regularization.

@@ -1,0 +1,443 @@
+# Chit 14: CIFAR-10 FNN: ten object categories
+
+14. Develop an FNN model to classify images into ten different object categories. Perform preprocessing, model training and testing, and display predicted class labels. Use – Dataset - CIFAR-10 
+
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+
+
+# Step 2: Load and prepare CIFAR-10
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+
+X = X.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1) / 255.0
+
+class_names = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+
+image_shape = (32, 32, 3)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(len(X_train), 3072)
+X_test = X_test.reshape(len(X_test), 3072)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+
+# Step 7: Evaluate on test data
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+
+
+# Step 8: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+# Step 9: Show five examples
+plt.figure(figsize=(14, 4))
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+    plt.imshow(image)
+    plt.title(
+        f"Actual: {class_names[int(y_test[i])]}\n"
+        f"Predicted: {class_names[int(y_pred[i])]}"
+    )
+    plt.axis("off")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 14: CIFAR-10 FNN — Ten Object Categories
+
+## Aim
+
+Prepare CIFAR-10 color images, train a Feedforward Neural Network (FNN) to classify them into 10 object categories, evaluate it, and display predictions for five test images.
+
+## How the model works
+
+```text
+32 × 32 color image → flatten to 3,072 values → Dense(256) → Dense(128) → Softmax(10 classes)
+```
+
+## Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+```
+
+- `numpy as np` handles arrays and is used to select predicted classes.
+- `tensorflow as tf` imports TensorFlow, but `tf` is not directly used in this code.
+- `Sequential` creates a model with layers arranged in order.
+- `Input` defines the shape of data entering the model.
+- `Dense` creates fully connected neural network layers.
+- `pandas as pd` reads the CSV file.
+- `train_test_split` divides the data into training and testing sets.
+- `matplotlib.pyplot as plt` displays the images and their labels.
+
+## Step 2: Load and prepare CIFAR-10
+
+```python
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+```
+
+- `pd.read_csv(...)` loads the CSV file into a table.
+- `dtype=np.uint8` reads the pixel values as small unsigned integers from 0 to 255.
+- The CSV is expected to contain a `label` column and pixel columns.
+
+```python
+y = data["label"].to_numpy(dtype="int64")
+X = data.drop(columns="label").to_numpy(dtype="float32")
+```
+
+- `y` contains the correct class number for each image.
+- `data["label"]` selects the label column.
+- `.to_numpy(dtype="int64")` converts labels to integer array values.
+- `X` contains the image pixel values.
+- `.drop(columns="label")` removes the labels from the input data.
+- `.to_numpy(dtype="float32")` converts pixels into decimal numbers.
+
+```python
+X = X.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1) / 255.0
+```
+
+This line changes the pixel array into color images and normalizes it:
+
+- `.reshape(-1, 3, 32, 32)` arranges each image as 3 color channels, each 32 × 32 pixels. `-1` lets Python infer the number of images.
+- `.transpose(0, 2, 3, 1)` reorders the dimensions to `(number of images, height, width, color channels)`, which is the image format used here.
+- `/ 255.0` scales the pixel values from 0–255 to 0–1. This is called **normalization**.
+
+```python
+class_names = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
+image_shape = (32, 32, 3)
+```
+
+- `class_names` maps the class numbers 0–9 to their object names. The list order must match the dataset’s label numbering.
+- `image_shape` means 32 pixels high, 32 pixels wide, and 3 color channels: red, green, and blue.
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+```
+
+- `train_test_split(...)` divides images and labels into training and testing groups.
+- `X_train`, `y_train` are used to train the model.
+- `X_test`, `y_test` are held aside for evaluation.
+- `test_size=0.2` reserves 20% for testing and uses 80% for training.
+- `stratify=y` keeps the class proportions similar in both sets.
+- `random_state=42` makes the split repeatable when the code is run again with the same data and settings.
+
+## Step 3: Flatten the images
+
+```python
+X_train = X_train.reshape(len(X_train), 3072)
+X_test = X_test.reshape(len(X_test), 3072)
+```
+
+- Each color image has `32 × 32 × 3 = 3,072` pixel values.
+- `len(X_train)` and `len(X_test)` give the number of images in each set.
+- `.reshape(...)` turns each 3D color image into a one-dimensional list.
+- This is called **flattening**. Dense layers expect each image as a vector.
+
+## Step 4: Build the model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+- `num_classes` counts the object categories: 10.
+- `Sequential([...])` arranges the layers in order.
+- `Input(shape=(X_train.shape[1],))` tells the model that each image has 3,072 input values.
+- `Dense(256, ...)` and `Dense(128, ...)` create hidden layers with 256 and 128 neurons.
+- `activation="relu"` sets negative values to zero and keeps positive values.
+- `Dense(num_classes, ...)` creates 10 output neurons, one per category.
+- `activation="softmax"` converts output scores into class probabilities. The category with the highest probability is the prediction.
+
+## Step 5: Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+- `optimizer="adam"` selects the method that updates the model’s weights during training.
+- `loss="sparse_categorical_crossentropy"` measures how far the predicted class probabilities are from the correct integer labels.
+- `metrics=["accuracy"]` asks Keras to track the fraction of correct predictions.
+
+“Sparse” is appropriate because the labels are class numbers rather than one-hot vectors.
+
+## Step 6: Train the model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+- `model.fit(...)` trains the model on the training images and labels.
+- `epochs=15` means the model goes through the training data 15 times.
+- `batch_size=128` means it processes up to 128 images before updating its weights.
+- `verbose=0` hides training progress messages.
+
+## Step 7: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate(...)` measures performance on the test set.
+- It returns the loss followed by accuracy.
+- `_` receives the loss, which this line does not use.
+- `test_accuracy` receives the accuracy value.
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `print(...)` displays the result.
+- `test_accuracy * 100` converts the fraction to a percentage.
+- `:.2f` formats it to two decimal places.
+
+## Step 8: Predict test images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+- `model.predict(X_test, ...)` returns class scores for each test image.
+- `np.argmax(..., axis=1)` selects the position with the highest score for each image.
+- `y_pred` stores those predicted class numbers.
+- `axis=1` means to choose the highest score across the categories for each image.
+
+## Step 9: Display five examples
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a figure 14 inches wide and 4 inches high.
+
+```python
+for i in range(5):
+    image = X_test[i].reshape(image_shape)
+    plt.subplot(1, 5, i + 1)
+    plt.imshow(image)
+```
+
+- `for i in range(5)` repeats the instructions five times, for images 0 through 4.
+- `X_test[i]` selects one test image.
+- `.reshape(image_shape)` restores the image to `(32, 32, 3)` for display.
+- `plt.subplot(1, 5, i + 1)` places the image in one of five positions in a row. Positions start at 1, so the code uses `i + 1`.
+- `plt.imshow(image)` displays the color image.
+
+```python
+    plt.title(
+        f"Actual: {class_names[int(y_test[i])]}\\n"
+        f"Predicted: {class_names[int(y_pred[i])]}"
+    )
+    plt.axis("off")
+```
+
+- `y_test[i]` is the actual class number.
+- `y_pred[i]` is the predicted class number.
+- `class_names[...]` converts each number to a category name.
+- `int(...)` ensures the list index is an integer.
+- `\\n` starts the predicted label on a new line.
+- `plt.axis("off")` hides the axes.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `plt.tight_layout()` adjusts spacing so images and titles fit.
+- `plt.show()` displays the figure.
+
+## How to interpret the attached output
+
+The five displayed examples are:
+
+| Sample | Actual | Predicted | Result |
+|---|---|---|---|
+| 1 | Bird | Bird | Correct |
+| 2 | Horse | Horse | Correct |
+| 3 | Automobile | Truck | Incorrect |
+| 4 | Truck | Automobile | Incorrect |
+| 5 | Frog | Frog | Correct |
+
+Three of the five displayed predictions match. Automobile and truck are easily confused in some small CIFAR-10 images. These five examples are only a sample; the test accuracy evaluates the full test set.
+
+The screenshot does not show the printed test accuracy, so its exact percentage cannot be read from this image.
+
+## Quick revision before viva
+
+| Term | Meaning |
+|---|---|
+| CIFAR-10 | Dataset with 10 categories of 32 × 32 color images |
+| RGB | The red, green, and blue channels in a color image |
+| Normalization | Scaling pixel values from 0–255 to 0–1 |
+| Flattening | Converting a 32 × 32 × 3 image into 3,072 values |
+| `stratify=y` | Preserves class proportions in the train/test split |
+| `random_state=42` | Makes the split repeatable |
+| `np.argmax()` | Selects the category with the highest score |
+
+## One-minute explanation for the external examiner
+
+> This practical uses an FNN to classify CIFAR-10 images into 10 object categories. The CSV data is loaded, labels are separated from the pixel values, and pixels are normalized from 0 to 1. Each 32 by 32 RGB image is reshaped and flattened into 3,072 values. The data is split into training and test sets while preserving the class proportions. The model uses two hidden Dense layers with ReLU and a Softmax output layer with 10 neurons. After training, it evaluates test accuracy, predicts categories for the test images, and displays the actual and predicted labels for five examples.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20 important viva questions and answers
+
+1. **What is the aim of this practical?**  
+   To classify CIFAR-10 images into 10 object categories using an FNN.
+
+2. **What is CIFAR-10?**  
+   A dataset of small color images divided into 10 object categories.
+
+3. **What are the 10 CIFAR-10 classes?**  
+   Airplane, automobile, bird, cat, deer, dog, frog, horse, ship, and truck.
+
+4. **What is the size of each CIFAR-10 image?**  
+   32 × 32 pixels with 3 color channels.
+
+5. **What do the three image channels represent?**  
+   Red, green, and blue (RGB).
+
+6. **Why divide pixels by 255?**  
+   To normalize pixel values from 0–255 to 0–1.
+
+7. **How many values are in a flattened color image?**  
+   3,072, because `32 × 32 × 3 = 3,072`.
+
+8. **Why flatten the images?**  
+   Dense layers take a one-dimensional vector as input.
+
+9. **What does `train_test_split()` do?**  
+   It divides the data into training and test sets.
+
+10. **What does `test_size=0.2` mean?**  
+    Twenty percent of the data is reserved for testing.
+
+11. **What does `stratify=y` do?**  
+    It keeps the class proportions similar in the training and test sets.
+
+12. **What does `random_state=42` do?**  
+    It makes the random split repeatable for the same input and settings.
+
+13. **What is a Dense layer?**  
+    A fully connected layer where each neuron connects to all neurons in the previous layer.
+
+14. **What does ReLU do?**  
+    It sets negative values to zero and keeps positive values.
+
+15. **What does Softmax do?**  
+    It converts the model’s output scores into probabilities across the 10 classes.
+
+16. **Why use sparse categorical cross-entropy?**  
+    It is suitable for multi-class classification when labels are stored as integers.
+
+17. **What does `np.argmax()` do in this program?**  
+    It selects the class with the highest prediction score for each image.
+
+18. **What is the difference between `y_test` and `y_pred`?**  
+    `y_test` contains the actual class numbers; `y_pred` contains the predicted class numbers.
+
+19. **Why might a CIFAR-10 image be misclassified?**  
+    Images are small and may be blurry or visually similar, such as automobiles and trucks.
+
+20. **Does the five-image display show the model’s overall accuracy?**  
+    No. It shows five examples. The full test accuracy is calculated with `model.evaluate()`.

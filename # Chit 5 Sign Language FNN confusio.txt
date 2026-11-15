@@ -1,0 +1,1190 @@
+# Chit 5: Sign Language FNN: confusion matrix
+
+5. Build a Feedforward Neural Network for ASL alphabet classification. Evaluate the trained model using test data and generate a confusion matrix to identify correctly and incorrectly classified alphabet gestures. 
+
+# Step 1: Import the libraries
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
+
+
+# Step 2: Load and prepare Sign Language MNIST
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+image_shape = (28, 28, 1)
+
+
+# Step 3: Flatten the images
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+
+
+# Step 4: Build the model
+num_classes = len(class_names)
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+
+
+# Step 5: Compile and train
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# Step 6: Prepare and run the model
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+
+
+
+# Step 7: Predict test images
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+
+
+# Step 8: Confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=np.arange(num_classes))
+display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+fig, ax = plt.subplots(figsize=(10, 10))
+display.plot(ax=ax, xticks_rotation="vertical", colorbar=False, cmap="Blues", values_format="d")
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.show()
+
+
+
+# Step 9: Classification report
+print("\nClassification Report:")
+print(classification_report(
+    y_test,
+    y_pred,
+    labels=np.arange(24),
+    target_names=class_names
+))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Practical 5: Feedforward Neural Network for ASL Alphabet Classification – Confusion Matrix
+
+**Subject:** Deep Learning Practical  
+**Pattern:** SPPU 2019 Pattern – B.E. Information Technology
+
+## 1. Aim of the Practical
+
+To build a Feedforward Neural Network (FNN) for American Sign Language (ASL) alphabet classification, evaluate the trained model using testing data and generate a confusion matrix to identify correctly and incorrectly classified alphabet gestures.
+
+---
+
+# 2. Understanding the Practical
+
+In this practical, we use a Feedforward Neural Network to recognize American Sign Language alphabets from grayscale images.
+
+The program performs the following operations:
+
+1. Import required libraries.
+2. Load Sign Language MNIST dataset.
+3. Normalize pixel values.
+4. Encode alphabet labels.
+5. Flatten images into 784 features.
+6. Build an FNN with two hidden Dense layers.
+7. Compile and train the model.
+8. Predict alphabet classes for testing images.
+9. Generate a confusion matrix.
+10. Generate a classification report.
+
+### What is a Confusion Matrix?
+
+A confusion matrix is a table used to evaluate the performance of a classification model.
+
+It compares:
+- Actual labels (correct answers).
+- Predicted labels (model predictions).
+
+It helps us identify:
+- Correct predictions.
+- Incorrect predictions.
+- Which alphabet gestures are confused with other gestures.
+
+---
+
+# 3. Code Explanation – Line by Line
+
+## Step 1: Import the Libraries
+
+### Code
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
+```
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical calculations and array operations. |
+| `import tensorflow as tf` | Imports TensorFlow for Deep Learning. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `import pandas as pd` | Imports Pandas to read CSV datasets. |
+| `LabelEncoder` | Converts alphabet labels into numerical values. |
+| `matplotlib.pyplot as plt` | Used to display graphs and the confusion matrix. |
+| `confusion_matrix` | Calculates the confusion matrix. |
+| `ConfusionMatrixDisplay` | Displays the confusion matrix graphically. |
+| `classification_report` | Generates precision, recall, F1-score and accuracy information. |
+
+### Important: Three New Functions
+
+**1. confusion_matrix()**
+
+Calculates the number of correct and incorrect predictions.
+
+**2. ConfusionMatrixDisplay()**
+
+Converts the confusion matrix into a visual graph.
+
+**3. classification_report()**
+
+Displays classification performance using precision, recall, F1-score and support.
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### Code
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**Explanation:**
+
+- `pd.read_csv()` reads CSV files.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+We load two datasets:
+
+1. Training dataset – Used to train the model.
+2. Testing dataset – Used to evaluate the model.
+
+### Next Code
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+These lines perform three operations.
+
+**1. `drop(columns="label")`**
+
+Removes the label column from the dataset.
+
+**2. `to_numpy(dtype="float32")`**
+
+Converts the dataset into NumPy arrays.
+
+**3. `/255.0`**
+
+Normalizes pixel values between 0 and 1.
+
+Example:
+
+| Original Pixel | Normalized Pixel |
+|---:|---:|
+| 0 | 0.0 |
+| 128 | 0.50 |
+| 255 | 1.0 |
+
+**Why normalize?**
+
+To keep pixel values within a smaller range and help the model learn efficiently.
+
+### Next Code
+
+```python
+encoder = LabelEncoder()
+
+y_train = encoder.fit_transform(train_df["label"])
+
+y_test = encoder.transform(test_df["label"])
+```
+
+**Explanation:**
+
+- `LabelEncoder()` creates a label encoder object.
+- `fit_transform()` learns the classes and converts training labels into numerical indices.
+- `transform()` converts testing labels using the same mapping.
+
+**Why do we use LabelEncoder?**
+
+To convert alphabet labels into numerical values that the neural network can process.
+
+### Next Code
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+
+image_shape = (28, 28, 1)
+```
+
+**First line:**
+
+Converts numerical class labels into alphabet characters.
+
+- `encoder.classes_` – Returns the original classes.
+- `int(label)` – Converts the label into an integer.
+- `+65` – Adds 65 to get the ASCII value.
+- `chr()` – Converts ASCII value into an alphabet character.
+
+**Second line:**
+
+Defines image dimensions.
+
+- 28 = Height.
+- 28 = Width.
+- 1 = Grayscale channel.
+
+---
+
+## Step 3: Flatten the Images
+
+### Code
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+**What is Flattening?**
+
+Flattening means converting a two-dimensional image into a one-dimensional array.
+
+Original image:
+
+```text
+28 × 28 pixels
+```
+
+After flattening:
+
+```text
+784 features
+```
+
+Because:
+
+28 × 28 = 784.
+
+**Why do we flatten images?**
+
+Because Dense layers expect one-dimensional feature vectors as input.
+
+---
+
+## Step 4: Build the Model
+
+### Code
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+### Understanding the Layers
+
+| Layer | Neurons | Activation |
+|---|---:|---|
+| Input Layer | 784 | None |
+| Hidden Layer 1 | 256 | ReLU |
+| Hidden Layer 2 | 128 | ReLU |
+| Output Layer | 24 | Softmax |
+
+**1. Input Layer**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+Accepts 784 input features.
+
+**2. First Hidden Layer**
+
+```python
+Dense(256, activation="relu")
+```
+
+Creates a fully connected layer containing 256 neurons.
+
+ReLU is used as the activation function.
+
+**3. Second Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+Creates another fully connected layer containing 128 neurons.
+
+**4. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+Creates 24 output neurons.
+
+Softmax converts output values into probabilities and selects the most likely alphabet class.
+
+### Neural Network Architecture
+
+```text
+          INPUT LAYER
+          784 Neurons
+               |
+               |
+       HIDDEN LAYER 1
+          256 Neurons
+             ReLU
+               |
+               |
+       HIDDEN LAYER 2
+          128 Neurons
+             ReLU
+               |
+               |
+         OUTPUT LAYER
+          24 Neurons
+            Softmax
+               |
+               |
+       Predicted Alphabet
+```
+
+---
+
+## Step 5: Compile and Train the Model
+
+### Code
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation prepares the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+### Next Code
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This line trains the neural network.
+
+| Parameter | Explanation |
+|---|---|
+| `model.fit()` | Trains the model. |
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=15` | Trains the model for 15 epochs. |
+| `batch_size=128` | Processes 128 images together before updating weights. |
+| `verbose=0` | Hides training progress. |
+
+### What happens during training?
+
+1. Training images are given to the model.
+2. The model predicts the alphabet.
+3. Predicted output is compared with actual labels.
+4. Loss is calculated.
+5. Adam optimizer updates weights.
+6. This process repeats for 15 epochs.
+
+---
+
+# 4. Step 7: Predict Test Images
+
+### Code
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This line predicts alphabet classes for testing images.
+
+Let's understand it.
+
+**1. `model.predict(X_test, verbose=0)`**
+
+- `model.predict()` – Makes predictions using the trained model.
+- `X_test` – Contains testing images.
+- `verbose=0` – Hides prediction progress.
+
+It returns probabilities for all 24 alphabet classes for every testing image.
+
+Example:
+
+| Alphabet | Probability |
+|---|---:|
+| A | 0.10 |
+| B | 0.20 |
+| C | 0.60 |
+| D | 0.10 |
+
+Here, C has the highest probability.
+
+**2. `np.argmax()`**
+
+Returns the index of the highest probability.
+
+Example:
+
+```python
+probabilities = [0.10, 0.20, 0.60, 0.10]
+
+np.argmax(probabilities)
+```
+
+Output:
+
+```text
+2
+```
+
+**3. `axis=1`**
+
+Finds the highest probability separately for each image.
+
+**4. `y_pred`**
+
+Stores the predicted numerical class indices.
+
+**In simple words:** This code predicts the alphabet for every testing image and selects the class with the highest probability.
+
+---
+
+# 5. Step 8: Generate the Confusion Matrix
+
+**THIS IS THE MOST IMPORTANT AND NEW PART OF PRACTICAL 5.**
+
+### Code
+
+```python
+cm = confusion_matrix(y_test, y_pred, labels=np.arange(num_classes))
+```
+
+This line calculates the confusion matrix.
+
+Let's understand each part.
+
+| Code | Explanation |
+|---|---|
+| `cm` | Variable that stores the confusion matrix. |
+| `confusion_matrix()` | Calculates correct and incorrect predictions. |
+| `y_test` | Contains actual testing labels. |
+| `y_pred` | Contains predicted testing labels. |
+| `labels=` | Specifies the class labels to include. |
+| `np.arange(num_classes)` | Generates class indices from 0 to 23. |
+
+### Example
+
+Suppose we have five actual and predicted results:
+
+| Actual | Predicted |
+|---|---|
+| A | A |
+| B | B |
+| C | A |
+| A | A |
+| B | C |
+
+The confusion matrix will be:
+
+| Actual / Predicted | A | B | C |
+|---|---:|---:|---:|
+| A | 2 | 0 | 0 |
+| B | 0 | 1 | 1 |
+| C | 1 | 0 | 0 |
+
+**Understanding:**
+
+- A was correctly predicted 2 times.
+- B was correctly predicted 1 time.
+- C was incorrectly predicted as A.
+- B was incorrectly predicted as C.
+
+### Next Code
+
+```python
+display = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=class_names
+)
+```
+
+This line prepares the confusion matrix for graphical display.
+
+**Explanation:**
+
+- `ConfusionMatrixDisplay()` – Creates a display object for the confusion matrix.
+- `confusion_matrix=cm` – Passes the calculated confusion matrix.
+- `display_labels=class_names` – Displays alphabet names instead of numerical indices.
+
+For example:
+
+Instead of displaying:
+
+```text
+0, 1, 2, 3, 4
+```
+
+It displays:
+
+```text
+A, B, C, D, E
+```
+
+### Next Code
+
+```python
+fig, ax = plt.subplots(figsize=(10, 10))
+```
+
+Creates a figure and an axis for displaying the confusion matrix.
+
+- `fig` – Stores the figure.
+- `ax` – Stores the axes.
+- `plt.subplots()` – Creates a figure and plotting area.
+- `figsize=(10,10)` – Sets the figure size to 10 × 10 inches.
+
+### Next Code
+
+```python
+display.plot(
+    ax=ax,
+    xticks_rotation="vertical",
+    colorbar=False,
+    cmap="Blues",
+    values_format="d"
+)
+```
+
+This line displays the confusion matrix graphically.
+
+| Parameter | Explanation |
+|---|---|
+| `display.plot()` | Displays the confusion matrix. |
+| `ax=ax` | Uses the previously created plotting area. |
+| `xticks_rotation="vertical"` | Rotates alphabet labels vertically. |
+| `colorbar=False` | Hides the color scale bar. |
+| `cmap="Blues"` | Uses blue shades to represent values. |
+| `values_format="d"` | Displays values as integers. |
+
+**What is cmap="Blues"?**
+
+It represents the matrix using different shades of blue.
+
+- Darker blue = Higher number.
+- Lighter blue = Lower number.
+
+### Next Code
+
+```python
+plt.title("Confusion Matrix")
+```
+
+Displays the title of the graph.
+
+### Next Code
+
+```python
+plt.tight_layout()
+```
+
+Adjusts spacing to avoid overlapping labels.
+
+### Final Code
+
+```python
+plt.show()
+```
+
+Displays the final confusion matrix.
+
+---
+
+# 6. Understanding Your Confusion Matrix Output
+
+Your output contains a 24 × 24 confusion matrix.
+
+- X-axis = Predicted Label.
+- Y-axis = True Label (Actual Label).
+
+Each row represents an actual alphabet, and each column represents a predicted alphabet.
+
+### 1. Diagonal Elements
+
+The diagonal elements represent correctly classified images.
+
+For example:
+
+| Alphabet | Correct Predictions |
+|---|---:|
+| A | 331 |
+| B | 372 |
+| C | 289 |
+| D | 220 |
+| E | 473 |
+| F | 223 |
+
+For alphabet A:
+
+- Actual A images = 331.
+- Predicted A images = 331.
+- All 331 images were correctly classified.
+
+Therefore, A has 100% recall.
+
+### 2. Off-Diagonal Elements
+
+Off-diagonal elements represent incorrectly classified images.
+
+For example, look at the B row:
+
+- 372 images were correctly predicted as B.
+- 19 images were incorrectly predicted as D.
+- 41 images were incorrectly predicted as K.
+
+This means the model sometimes confuses B gestures with D and K gestures.
+
+Another example:
+
+For alphabet S:
+
+- 66 images were correctly predicted as S.
+- 58 images were predicted as I.
+- 32 images were predicted as N.
+- 29 images were predicted as M.
+
+This indicates that the model has difficulty distinguishing some S gestures from other alphabet gestures.
+
+### Important Points to Remember
+
+| Matrix Position | Meaning |
+|---|---|
+| Diagonal elements | Correct predictions |
+| Off-diagonal elements | Incorrect predictions |
+| Dark blue cells | Higher number of predictions |
+| Light blue cells | Lower number of predictions |
+| Rows | Actual labels |
+| Columns | Predicted labels |
+
+**External Viva Question:**
+
+Q. How do you identify correct predictions in a confusion matrix?
+
+Ans. Correct predictions are represented by the diagonal elements of the confusion matrix.
+
+Q. How do you identify incorrect predictions?
+
+Ans. Incorrect predictions are represented by the off-diagonal elements.
+
+---
+
+# 7. Step 9: Classification Report
+
+### Code
+
+```python
+print("\nClassification Report:")
+```
+
+Displays the heading Classification Report.
+
+- `print()` – Displays output.
+- `\n` – Moves to a new line.
+
+### Next Code
+
+```python
+print(classification_report(
+    y_test,
+    y_pred,
+    labels=np.arange(24),
+    target_names=class_names
+))
+```
+
+This generates a detailed classification report.
+
+Let's understand each parameter.
+
+| Parameter | Explanation |
+|---|---|
+| `classification_report()` | Generates classification performance metrics. |
+| `y_test` | Actual testing labels. |
+| `y_pred` | Predicted testing labels. |
+| `labels=np.arange(24)` | Specifies 24 class indices. |
+| `target_names=class_names` | Displays alphabet names instead of numbers. |
+
+The classification report contains five important values.
+
+## A. Precision
+
+Precision tells us how many images predicted as a particular alphabet were actually correct.
+
+**Formula:**
+
+Precision = TP / (TP + FP)
+
+Where:
+
+- TP = True Positive.
+- FP = False Positive.
+
+Example:
+
+If the model predicts 100 images as A and 80 are actually A:
+
+Precision = 80/100 = 0.80 = 80%.
+
+## B. Recall
+
+Recall tells us how many actual images of a particular alphabet were correctly identified.
+
+**Formula:**
+
+Recall = TP / (TP + FN)
+
+Where:
+
+- TP = True Positive.
+- FN = False Negative.
+
+Example:
+
+If there are 100 actual A images and the model correctly identifies 90:
+
+Recall = 90/100 = 90%.
+
+## C. F1-Score
+
+F1-score is the harmonic mean of precision and recall.
+
+It balances both precision and recall.
+
+**Formula:**
+
+F1-score = 2 × (Precision × Recall) / (Precision + Recall)
+
+Higher F1-score generally indicates better classification performance.
+
+## D. Support
+
+Support represents the total number of actual samples belonging to each class in the testing dataset.
+
+Example:
+
+```text
+A    331
+B    432
+C    310
+```
+
+It means:
+
+- 331 actual A images.
+- 432 actual B images.
+- 310 actual C images.
+
+## E. Accuracy
+
+Accuracy represents the percentage of correctly classified images out of all testing images.
+
+**Formula:**
+
+Accuracy = Correct Predictions / Total Predictions
+
+### Your Classification Report
+
+```text
+              precision    recall  f1-score   support
+
+           A       0.78      1.00      0.88       331
+           B       0.98      0.86      0.92       432
+           C       0.92      0.93      0.93       310
+           D       0.82      0.90      0.86       245
+           E       0.87      0.95      0.91       498
+           F       0.83      0.90      0.86       247
+           G       0.87      0.74      0.80       348
+           H       0.94      0.86      0.90       436
+           I       0.68      0.85      0.75       288
+           K       0.71      0.67      0.69       331
+           L       0.78      0.83      0.80       209
+           M       0.76      0.58      0.66       394
+           N       0.64      0.56      0.60       291
+           O       0.98      0.66      0.79       246
+           P       0.85      1.00      0.92       347
+           Q       0.65      0.94      0.77       164
+           R       0.59      0.44      0.50       144
+           S       0.29      0.27      0.28       246
+           T       0.53      0.71      0.61       248
+           U       0.57      0.56      0.56       266
+           V       0.73      0.71      0.72       346
+           W       0.69      0.62      0.65       206
+           X       0.64      0.66      0.65       267
+           Y       0.71      0.63      0.67       332
+
+    accuracy                           0.76      7172
+   macro avg       0.74      0.74      0.74      7172
+weighted avg       0.76      0.76      0.76      7172
+```
+
+### Understanding Your Results
+
+| Metric | Value |
+|---|---:|
+| Overall Accuracy | 76% |
+| Macro Average Precision | 0.74 |
+| Macro Average Recall | 0.74 |
+| Macro Average F1-score | 0.74 |
+| Weighted Average Precision | 0.76 |
+| Weighted Average Recall | 0.76 |
+| Weighted Average F1-score | 0.76 |
+| Total Testing Images | 7172 |
+
+**What is Macro Average?**
+
+It calculates the average performance across all classes by giving equal importance to every class.
+
+**What is Weighted Average?**
+
+It calculates the average performance by considering the number of samples in each class.
+
+### Important Observations
+
+1. Alphabet A and P have 100% recall.
+2. Alphabet S has comparatively low performance with an F1-score of 0.28.
+3. Overall classification accuracy is approximately 76%.
+4. The model sometimes confuses visually similar hand gestures.
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 8. Important Viva Questions and Answers
+
+These are the most important questions an external examiner may ask from Practical 5.
+
+## A. Basic Questions
+
+**Q1. What is the aim of this practical?**
+
+To implement an FNN for ASL alphabet classification and evaluate its performance using a confusion matrix.
+
+**Q2. Which dataset is used?**
+
+Sign Language MNIST dataset.
+
+**Q3. What is the size of each image?**
+
+28 × 28 pixels.
+
+**Q4. How many classes are present?**
+
+24 classes.
+
+**Q5. Which neural network is used?**
+
+Feedforward Neural Network.
+
+**Q6. How many hidden layers are used?**
+
+Two hidden layers containing 256 and 128 neurons.
+
+## B. Confusion Matrix Questions
+
+**Q7. What is a confusion matrix?**
+
+A confusion matrix is a table used to evaluate a classification model by comparing actual and predicted labels.
+
+**Q8. Why do we use a confusion matrix?**
+
+To identify correct and incorrect predictions made by the model.
+
+**Q9. Which function is used to calculate the confusion matrix?**
+
+`confusion_matrix()`.
+
+**Q10. Which library provides confusion_matrix()?**
+
+Scikit-learn.
+
+**Q11. What are diagonal elements?**
+
+They represent correctly classified samples.
+
+**Q12. What are off-diagonal elements?**
+
+They represent incorrectly classified samples.
+
+**Q13. What does the X-axis represent?**
+
+Predicted labels.
+
+**Q14. What does the Y-axis represent?**
+
+Actual or true labels.
+
+**Q15. What is a True Positive (TP)?**
+
+When the actual class and predicted class are both positive for a particular class.
+
+**Q16. What is a False Positive (FP)?**
+
+When the model incorrectly predicts a sample as belonging to a particular class.
+
+**Q17. What is a False Negative (FN)?**
+
+When an actual sample belonging to a particular class is incorrectly predicted as another class.
+
+**Q18. What is a True Negative (TN)?**
+
+When a sample does not belong to a particular class and is correctly predicted as not belonging to that class.
+
+## C. Classification Report Questions
+
+**Q19. What is a classification report?**
+
+It is a report that displays precision, recall, F1-score and support for each class.
+
+**Q20. What is precision?**
+
+Precision tells us how many predicted positive samples are actually positive.
+
+**Q21. What is recall?**
+
+Recall tells us how many actual positive samples are correctly identified.
+
+**Q22. What is F1-score?**
+
+It is the harmonic mean of precision and recall.
+
+**Q23. What is support?**
+
+It represents the number of actual samples in each class.
+
+**Q24. What is the accuracy of your model?**
+
+Approximately 76%.
+
+**Q25. Which function generates the classification report?**
+
+`classification_report()`.
+
+**Q26. What is the difference between precision and recall?**
+
+- Precision focuses on how many predicted positives are correct.
+- Recall focuses on how many actual positives are correctly identified.
+
+## D. Code-Based Questions
+
+**Q27. What is `np.argmax()`?**
+
+It returns the index of the maximum value.
+
+**Q28. Why do we use `axis=1`?**
+
+To find the highest probability separately for each image.
+
+**Q29. What is `ConfusionMatrixDisplay()`?**
+
+It is used to display the confusion matrix graphically.
+
+**Q30. What is `cmap="Blues"`?**
+
+It displays the confusion matrix using different shades of blue.
+
+**Q31. What is `values_format="d"`?**
+
+It displays matrix values as integers.
+
+**Q32. What is `target_names=class_names`?**
+
+It displays alphabet names instead of numerical class indices in the classification report.
+
+**Q33. What is `np.arange(24)`?**
+
+It generates numerical values from 0 to 23.
+
+**Q34. What is `plt.subplots()`?**
+
+It creates a figure and plotting area.
+
+---
+
+# 9. Difference Between Practical 1 to Practical 5
+
+All five practicals use the same Sign Language MNIST dataset and almost the same FNN architecture. Their main objectives are different.
+
+| Practical | Main Objective | Important Functions |
+|---|---|---|
+| Chit 1 | Display testing accuracy. | `model.evaluate()` |
+| Chit 2 | Display training/testing accuracy and accuracy/loss graphs. | `history.history`, `plt.plot()` |
+| Chit 3 | Display five images with actual and predicted labels. | `model.predict()`, `np.argmax()` |
+| Chit 4 | Display testing accuracy, testing loss and sample predictions. | `model.evaluate()`, `model.predict()` |
+| Chit 5 | Generate confusion matrix and classification report. | `confusion_matrix()`, `classification_report()` |
+
+### Most Important New Functions in Chit 5
+
+| Function | Purpose |
+|---|---|
+| `confusion_matrix()` | Calculates correct and incorrect predictions. |
+| `ConfusionMatrixDisplay()` | Prepares confusion matrix for display. |
+| `display.plot()` | Displays confusion matrix graphically. |
+| `classification_report()` | Displays precision, recall, F1-score and support. |
+
+---
+
+# 10. Quick Revision Before Viva
+
+| Parameter | Value |
+|---|---|
+| Dataset | Sign Language MNIST |
+| Image Size | 28 × 28 |
+| Input Features | 784 |
+| Number of Classes | 24 |
+| Hidden Layer 1 | 256 neurons |
+| Hidden Layer 2 | 128 neurons |
+| Output Layer | 24 neurons |
+| Activation Functions | ReLU, Softmax |
+| Optimizer | Adam |
+| Loss Function | Sparse Categorical Crossentropy |
+| Epochs | 15 |
+| Batch Size | 128 |
+| Testing Images | 7172 |
+| Testing Accuracy | Approximately 76% |
+| Main Output | Confusion Matrix |
+| Additional Output | Classification Report |
+
+## 11. Most Important 10 Questions for External
+
+If you have limited time, prepare these first:
+
+1. What is a confusion matrix?
+2. Why do we use a confusion matrix?
+3. What do diagonal and off-diagonal elements represent?
+4. What is the difference between actual and predicted labels?
+5. What is precision?
+6. What is recall?
+7. What is F1-score?
+8. What is support?
+9. What is the difference between precision and recall?
+10. What is the difference between a confusion matrix and a classification report?
+
+### 1-Minute Explanation for External
+
+"We have implemented a Feedforward Neural Network for American Sign Language alphabet classification using the Sign Language MNIST dataset.
+
+First, we loaded the training and testing datasets and performed preprocessing by normalizing pixel values, encoding labels and flattening images.
+
+Then, we created a Sequential Neural Network with two hidden Dense layers containing 256 and 128 neurons and an output layer containing 24 neurons.
+
+We used ReLU activation for hidden layers, Softmax for the output layer and Adam optimizer for training.
+
+After training the model for 15 epochs, we predicted the testing labels using model.predict() and NumPy argmax().
+
+Then, we generated a confusion matrix using confusion_matrix() to identify correctly and incorrectly classified images.
+
+Finally, we generated a classification report using classification_report(), which displays precision, recall, F1-score and support.
+
+Our model achieved approximately 76% classification accuracy on 7172 testing images."
+
+---
+
