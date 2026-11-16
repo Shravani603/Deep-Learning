@@ -359,3 +359,796 @@ CIFAR-10 images are small, color images with varied backgrounds and object appea
 
 20. **How could this model’s performance potentially be improved?**  
     By tuning the model and training settings, or using data augmentation and regularization.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 19: CIFAR-10 CNN – Object Classification
+
+## 1. Aim
+
+To develop a **Convolutional Neural Network (CNN)** using TensorFlow/Keras to classify images into 10 object categories using the CIFAR-10 dataset.
+
+The model performs:
+- Image preprocessing and normalization.
+- Convolution operations to extract image features.
+- Max-pooling to reduce feature dimensions.
+- Model training using CNN layers.
+- Model testing and display of classification accuracy.
+
+---
+
+## 2. Step-by-Step Code Explanation
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.model_selection import train_test_split
+```
+
+| Library / Function | Explanation |
+|---|---|
+| `numpy` | Performs numerical operations and array handling. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the input shape of images. |
+| `Dense` | Creates fully connected neural network layers. |
+| `pandas` | Loads and handles the CIFAR-10 CSV dataset. |
+| `Conv2D` | Extracts image features using convolution. |
+| `MaxPooling2D` | Reduces the spatial dimensions of feature maps. |
+| `Flatten` | Converts feature maps into a one-dimensional array. |
+| `train_test_split` | Divides the dataset into training and testing data. |
+
+**Note:** The first comment `# Step 1: Import the libraries` is repeated twice in your code. It does not affect execution.
+
+---
+
+### Step 2: Load and Prepare CIFAR-10
+
+```python
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+```
+
+- `pd.read_csv()` loads the CIFAR-10 CSV file.
+- `"cifar-10.csv"` is the dataset filename.
+- `dtype=np.uint8` stores the original pixel and label values as unsigned 8-bit integers.
+- `uint8` can store values from 0 to 255.
+
+**What is CIFAR-10?**
+
+CIFAR-10 is a dataset containing 60,000 color images divided into 10 object categories.
+
+| Property | Description |
+|---|---|
+| Total images | 60,000 |
+| Image size | 32 × 32 pixels |
+| Image type | RGB (Color) |
+| Number of classes | 10 |
+| Channels | 3 |
+| Training images | 50,000 |
+| Testing images | 10,000 in the standard dataset |
+
+**The 10 CIFAR-10 categories are:**
+
+| Label | Category |
+|---:|---|
+| 0 | Airplane |
+| 1 | Automobile |
+| 2 | Bird |
+| 3 | Cat |
+| 4 | Deer |
+| 5 | Dog |
+| 6 | Frog |
+| 7 | Horse |
+| 8 | Ship |
+| 9 | Truck |
+
+#### Separate labels and images
+
+```python
+y = data["label"].to_numpy(dtype="int64")
+```
+
+- `data["label"]` selects the label column.
+- `to_numpy()` converts the column into a NumPy array.
+- `dtype="int64"` converts labels into integer values.
+- `y` stores the actual class labels.
+
+For example:
+
+```text
+[0, 3, 5, 1, 8, ...]
+```
+
+Each number represents an object category.
+
+```python
+X = data.drop(columns="label").to_numpy(dtype="float32")
+```
+
+- `drop(columns="label")` removes the label column.
+- The remaining columns contain image pixel values.
+- `to_numpy()` converts the pixel data into a NumPy array.
+- `dtype="float32"` converts pixel values into floating-point numbers.
+- `X` stores the image data.
+
+#### Reshape and normalize images
+
+```python
+X = X.reshape(-1, 32, 32, 3) / 255.0
+```
+
+This is an important preprocessing step.
+
+**Understanding `reshape(-1, 32, 32, 3)`:**
+
+- `-1` automatically calculates the number of images.
+- `32` represents image height.
+- `32` represents image width.
+- `3` represents RGB color channels.
+
+Each image contains:
+
+32 × 32 × 3 = **3072 pixel values**.
+
+The reshaped data has this format:
+
+```text
+(Number of images, 32, 32, 3)
+```
+
+**Understanding `/ 255.0`:**
+
+- Original pixel values range from 0 to 255.
+- Dividing by 255 converts them into values between 0 and 1.
+- This process is called normalization.
+
+**Why do we normalize?**
+
+Normalization helps the model learn efficiently and improves training stability.
+
+**Important CSV format condition:**
+
+Your reshape assumes that the 3072 pixel columns are arranged in the order expected by `(32,32,3)`, meaning the RGB values for each pixel are arranged together.
+
+If the CSV stores all red-channel values first, followed by green and blue channels, this reshape would not reconstruct the original images correctly. The code can execute without an error even if the pixel ordering is wrong.
+
+#### Define class names
+
+```python
+class_names = ["airplane", "automobile", "bird", "cat", "deer",
+               "dog", "frog", "horse", "ship", "truck"]
+```
+
+- Stores the names of all 10 object categories.
+- These names correspond to labels from 0 to 9.
+- This list is used to identify the classes.
+
+#### Define image shape
+
+```python
+image_shape = (32, 32, 3)
+```
+
+- 32 = Image height.
+- 32 = Image width.
+- 3 = RGB channels.
+
+**RGB means:**
+- R = Red.
+- G = Green.
+- B = Blue.
+
+#### Split training and testing data
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y
+)
+```
+
+This divides the dataset into training and testing data.
+
+| Parameter | Explanation |
+|---|---|
+| `X` | Input images. |
+| `y` | Actual image labels. |
+| `test_size=0.2` | Uses 20% data for testing. |
+| `stratify=y` | Maintains approximately the same class proportions in both sets. |
+
+**How much data is used?**
+
+If the CSV contains all 60,000 CIFAR-10 images:
+
+- Training data = 80% = 48,000 images.
+- Testing data = 20% = 12,000 images.
+
+**What is stratify?**
+
+Stratify ensures that all 10 categories maintain approximately the same proportion in the training and testing datasets.
+
+For example, if the original dataset has approximately equal numbers of images from each category, both training and testing sets will also have approximately equal class representation.
+
+**Important:** This code uses a random split rather than the standard CIFAR-10 split of 50,000 training and 10,000 testing images. Also, no `random_state` is specified, so the split may change between executions.
+
+---
+
+### Step 3: Build the CNN Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This is the most important part of the practical.
+
+Let's understand each layer.
+
+**1. Number of classes**
+
+```python
+num_classes = len(class_names)
+```
+
+- Calculates the number of object categories.
+- Here, `num_classes = 10`.
+
+**2. Sequential model**
+
+```python
+model = Sequential([...])
+```
+
+Creates a CNN in which layers are arranged one after another.
+
+**3. Input layer**
+
+```python
+Input(shape=X_train.shape[1:])
+```
+
+- Defines the shape of each input image.
+- `X_train.shape[1:]` gives `(32, 32, 3)`.
+- The model accepts 32 × 32 RGB images.
+
+**4. First Convolutional Layer**
+
+```python
+Conv2D(32, (3, 3), activation="relu")
+```
+
+- `Conv2D` performs convolution.
+- `32` represents the number of filters.
+- `(3,3)` represents the filter size.
+- ReLU is the activation function.
+
+**What is convolution?**
+
+Convolution is an operation in which small filters slide over an image to identify important features.
+
+For CIFAR-10 images, convolution helps identify:
+- Edges.
+- Shapes.
+- Curves.
+- Textures.
+- Object patterns.
+
+**5. First Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Uses a 2 × 2 pooling window.
+- Selects the maximum value from each region.
+- Reduces the spatial dimensions of feature maps.
+
+**Why do we use Max-Pooling?**
+
+1. Reduces feature map dimensions.
+2. Reduces computational requirements.
+3. Retains important features.
+4. Makes the model less sensitive to small changes in image position.
+
+**6. Second Convolutional Layer**
+
+```python
+Conv2D(64, (3, 3), activation="relu")
+```
+
+- Uses 64 filters.
+- Each filter has a size of 3 × 3.
+- Extracts more complex features from previous feature maps.
+- Uses ReLU activation.
+
+**7. Second Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Uses a 2 × 2 pooling window.
+- Reduces feature map dimensions further.
+- Retains important features.
+
+**8. Flatten Layer**
+
+```python
+Flatten()
+```
+
+- Converts multidimensional feature maps into a one-dimensional array.
+- Makes the data suitable for Dense layers.
+
+**9. Dense Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Uses ReLU activation.
+- Learns patterns from the features extracted by convolutional layers.
+
+**10. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one object category.
+- Softmax produces probabilities for all 10 categories.
+- The category with the highest probability is selected as the prediction.
+
+### CNN Architecture Diagram
+
+```text
+           Input Image
+          32 × 32 × 3
+                |
+                ↓
+       Convolutional Layer 1
+         32 Filters (3 × 3)
+           ReLU Activation
+                |
+                ↓
+         Max-Pooling Layer
+             (2 × 2)
+                |
+                ↓
+       Convolutional Layer 2
+         64 Filters (3 × 3)
+           ReLU Activation
+                |
+                ↓
+         Max-Pooling Layer
+             (2 × 2)
+                |
+                ↓
+           Flatten Layer
+                |
+                ↓
+            Dense Layer
+            128 Neurons
+           ReLU Activation
+                |
+                ↓
+           Output Layer
+            10 Neurons
+         Softmax Activation
+                |
+                ↓
+       Predicted Object Category
+```
+
+### Understanding Dimensions After Each Layer
+
+| Layer | Output shape (excluding batch size) |
+|---|---|
+| Input | 32 × 32 × 3 |
+| Conv2D (32 filters) | 30 × 30 × 32 |
+| MaxPooling2D | 15 × 15 × 32 |
+| Conv2D (64 filters) | 13 × 13 × 64 |
+| MaxPooling2D | 6 × 6 × 64 |
+| Flatten | 2304 |
+| Dense | 128 |
+| Output | 10 |
+
+**How are these dimensions calculated?**
+
+- First convolution: 32 − 3 + 1 = 30.
+- First pooling: 30 ÷ 2 = 15.
+- Second convolution: 15 − 3 + 1 = 13.
+- Second pooling: 13 × 13 becomes 6 × 6.
+- Flatten: 6 × 6 × 64 = 2304.
+
+Note: The convolution layers use valid padding by default, so no extra padding is added.
+
+---
+
+### Step 4: Compile and Train
+
+**Compile the model:**
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted classes. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**Why sparse categorical crossentropy?**
+
+Because this is a multiclass classification problem with 10 categories, and the labels are integer values from 0 to 9.
+
+**Train the model:**
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit()` trains the CNN.
+- `X_train`: Training images.
+- `y_train`: Actual training labels.
+- `epochs=10`: The model passes through the complete training dataset 10 times.
+- `batch_size=128`: Processes 128 images in one batch before updating weights.
+- `verbose=0`: Hides the training progress.
+
+---
+
+### Step 5: Evaluate on Test Data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+**Explanation:**
+
+- `model.evaluate()` evaluates the trained CNN using testing data.
+- `X_test` contains testing images.
+- `y_test` contains actual testing labels.
+- It returns two values:
+  1. Test loss.
+  2. Test accuracy.
+- `_` stores the loss value, which is ignored.
+- `test_accuracy` stores the accuracy.
+- Multiplying by 100 converts accuracy into a percentage.
+- `.2f` displays the result up to two decimal places.
+
+---
+
+## 3. Output Explanation
+
+Your output:
+
+```text
+Testing accuracy: 60.65%
+```
+
+**What does 60.65% accuracy mean?**
+
+- The model correctly classifies approximately 60.65% of the testing images.
+- It makes incorrect predictions for approximately 39.35% of the testing images.
+- This indicates that the model has learned to recognize object categories, but there is still room for improvement.
+
+If your CSV contains 60,000 images and the test split contains 12,000 images:
+
+- Correct predictions: approximately 7,278.
+- Incorrect predictions: approximately 4,722.
+
+These are approximate counts based on the displayed accuracy.
+
+### Why is CIFAR-10 more difficult than MNIST?
+
+| MNIST | CIFAR-10 |
+|---|---|
+| Handwritten digits | Real-world object images |
+| Grayscale images | RGB color images |
+| 28 × 28 pixels | 32 × 32 pixels |
+| 1 channel | 3 channels |
+| 10 digit classes | 10 object classes |
+| Simpler image patterns | More complex image patterns |
+
+**Why can CIFAR-10 accuracy be lower?**
+
+1. CIFAR-10 contains real-world objects with different backgrounds.
+2. Objects may appear in different positions and orientations.
+3. Some categories have visually similar features, such as cats and dogs.
+4. Images have low resolution, making object identification difficult.
+5. This CNN has a relatively simple architecture and is trained for only 10 epochs.
+
+**Important observation:** Your 60.65% testing accuracy is reasonable for this basic CNN architecture. It is not necessary for every CNN to achieve very high accuracy.
+
+---
+
+## 4. Important Viva Questions and Answers
+
+### Q1. What is CIFAR-10?
+CIFAR-10 is a dataset containing 60,000 color images divided into 10 object categories.
+
+### Q2. What is the full form of CIFAR?
+CIFAR stands for Canadian Institute for Advanced Research.
+
+### Q3. How many images are present in CIFAR-10?
+It contains 60,000 images:
+- 50,000 training images in the standard dataset.
+- 10,000 testing images in the standard dataset.
+
+### Q4. What is the size of CIFAR-10 images?
+Each image is 32 × 32 pixels.
+
+### Q5. How many classes are present?
+There are 10 classes.
+
+### Q6. Name the 10 classes of CIFAR-10.
+Airplane, Automobile, Bird, Cat, Deer, Dog, Frog, Horse, Ship and Truck.
+
+### Q7. What type of images are present in CIFAR-10?
+RGB color images.
+
+### Q8. What is RGB?
+RGB stands for Red, Green and Blue. These are the three color channels used to represent color images.
+
+### Q9. What is CNN?
+CNN stands for Convolutional Neural Network. It is a deep learning model mainly used for image processing and classification.
+
+### Q10. What is convolution?
+Convolution is an operation in which filters slide over an image to extract important features.
+
+### Q11. What is a filter in CNN?
+A filter is a small matrix that moves over an image to identify features such as edges, shapes and patterns.
+
+### Q12. What is the filter size used in this practical?
+The filter size is 3 × 3 in both convolutional layers.
+
+### Q13. How many filters are used in the first convolutional layer?
+32 filters.
+
+### Q14. How many filters are used in the second convolutional layer?
+64 filters.
+
+### Q15. What is Max-Pooling?
+Max-pooling is a downsampling operation that selects the maximum value from a small region of a feature map.
+
+### Q16. What is the pooling size used?
+2 × 2.
+
+### Q17. Why do we use Max-Pooling?
+It reduces feature map dimensions, reduces computation and retains important features.
+
+### Q18. What is a feature map?
+A feature map is the output produced after applying a filter to an image or previous feature maps.
+
+### Q19. What is Flatten?
+Flatten converts multidimensional feature maps into a one-dimensional array before passing them to Dense layers.
+
+### Q20. Why does the output layer contain 10 neurons?
+Because CIFAR-10 contains 10 object categories.
+
+### Q21. What is Softmax?
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Q22. Why do we normalize images?
+To convert pixel values from 0–255 into 0–1, helping the model train efficiently.
+
+### Q23. Why do we use `train_test_split()`?
+It divides the dataset into training and testing sets.
+
+### Q24. What is `stratify=y`?
+It maintains approximately the same class distribution in the training and testing datasets.
+
+### Q25. What is the purpose of `reshape(-1,32,32,3)`?
+It converts flattened pixel values into images having 32 × 32 dimensions and 3 RGB channels.
+
+### Q26. What is the difference between FNN and CNN?
+- FNN uses flattened image data and fully connected layers.
+- CNN uses convolution and pooling layers to extract spatial features.
+- CNN is generally more suitable for image classification.
+
+### Q27. Which optimizer is used?
+Adam optimizer.
+
+### Q28. Which loss function is used?
+Sparse categorical crossentropy.
+
+### Q29. What is an epoch?
+One complete pass through the entire training dataset is called an epoch.
+
+### Q30. What is batch size?
+The number of training samples processed before updating the model weights is called batch size.
+
+### Q31. What is testing accuracy?
+Testing accuracy is the percentage of correctly classified images from the testing dataset.
+
+### Q32. Why is CIFAR-10 more difficult than MNIST?
+CIFAR-10 contains real-world color images with complex backgrounds and different object appearances, whereas MNIST contains simple handwritten digits.
+
+### Q33. What is overfitting?
+Overfitting occurs when a model performs very well on training data but poorly on unseen testing data.
+
+### Q34. What is the testing accuracy achieved in this practical?
+The testing accuracy achieved is **60.65%**.
+
+### Q35. How can we improve CIFAR-10 classification accuracy?
+We can use:
+- More convolutional layers.
+- More training epochs.
+- Data augmentation.
+- Dropout.
+- Batch normalization.
+- Better CNN architectures.
+
+---
+
+## 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Dataset | CIFAR-10 |
+| Total images | 60,000 |
+| Standard training images | 50,000 |
+| Standard testing images | 10,000 |
+| Image size | 32 × 32 |
+| Image type | RGB |
+| Number of channels | 3 |
+| Number of classes | 10 |
+| Input shape | 32 × 32 × 3 |
+| First Conv2D filters | 32 |
+| Second Conv2D filters | 64 |
+| Filter size | 3 × 3 |
+| Pooling size | 2 × 2 |
+| Pooling operation | Max-Pooling |
+| Dense hidden layer | 128 neurons |
+| Output neurons | 10 |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 10 |
+| Batch size | 128 |
+| Train-test split | 80:20 |
+| Testing accuracy | 60.65% |
+
+---
+
+## 6. Short Explanation to Tell the External Examiner
+
+"I have implemented a Convolutional Neural Network using the CIFAR-10 dataset to classify images into 10 object categories.
+
+First, I loaded the CIFAR-10 CSV dataset using Pandas. I separated the image pixels and labels, reshaped the images into 32 × 32 RGB format and normalized the pixel values between 0 and 1.
+
+Then, I divided the dataset into training and testing data using `train_test_split()` with an 80:20 ratio and stratification.
+
+I created a CNN with two convolutional layers containing 32 and 64 filters of size 3 × 3. I used ReLU activation and Max-Pooling layers of size 2 × 2 to extract important features and reduce dimensions.
+
+After that, I used Flatten to convert the feature maps into a one-dimensional array, followed by a Dense layer with 128 neurons and an output layer with 10 neurons using Softmax.
+
+I compiled the model using the Adam optimizer and sparse categorical crossentropy loss function. I trained it for 10 epochs with a batch size of 128.
+
+Finally, I evaluated the model using testing data and achieved **60.65% testing accuracy**."
+
+---
+
+## 7. Final Verdict – Important Code Check
+
+**Your CNN architecture, training and evaluation code are correct.** However, there are two dataset-related points you should verify.
+
+### 1. Check the pixel ordering in your CSV
+
+Your code uses:
+
+```python
+X = X.reshape(-1, 32, 32, 3) / 255.0
+```
+
+This is correct only if the CSV stores the RGB pixel values in the corresponding interleaved order expected by this reshape.
+
+If the CSV was created from the original CIFAR-10 binary dataset, its channels may be stored separately (all red values, then green, then blue). In that case, you need a different reshape and transpose operation.
+
+### 2. Your train-test split is valid
+
+```python
+train_test_split(X, y, test_size=0.2, stratify=y)
+```
+
+This correctly creates an 80:20 split while preserving class proportions. It does not use the original CIFAR-10 train-test division.
+
+### Final result
+
+| Check | Verdict |
+|---|---|
+| Dataset loading | Correct, assuming CSV format is valid |
+| Image normalization | Correct |
+| Image reshaping | Depends on CSV pixel ordering |
+| Train-test split | Correct |
+| CNN architecture | Correct |
+| Model compilation | Correct |
+| Model training | Correct |
+| Model evaluation | Correct |
+| Testing accuracy | 60.65% |
+
+**Most important viva topics:** CIFAR-10 categories, RGB channels, convolution, filters, Max-Pooling, feature maps, Flatten, `train_test_split()`, `stratify`, image normalization and why CIFAR-10 is harder to classify than MNIST.

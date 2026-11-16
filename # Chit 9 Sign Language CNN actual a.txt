@@ -378,3 +378,569 @@ All five displayed predictions are correct. This does not mean every test image 
 
 12. **Why are J and Z missing from the 24 classes?**  
     Their American Sign Language gestures involve movement, which static images do not capture well.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 9: Sign Language CNN – Actual and Predicted Labels
+
+## 1. Aim
+
+To develop a **CNN-based classification model** using the Sign Language MNIST dataset, predict alphabet labels for test images, and display the actual and predicted alphabets for any five test samples.
+
+## 2. Explanation of the Code
+
+### Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+| Library / Function | Purpose |
+|---|---|
+| `numpy` | Performs numerical operations on arrays. |
+| `tensorflow` | Used to create and train deep learning models. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input image shape. |
+| `Dense` | Creates fully connected layers. |
+| `pandas` | Reads CSV files and handles datasets. |
+| `Conv2D` | Extracts image features using convolution. |
+| `MaxPooling2D` | Reduces feature map dimensions. |
+| `Flatten` | Converts feature maps into a 1D array. |
+| `LabelEncoder` | Converts labels into numerical values. |
+| `matplotlib.pyplot` | Displays images and their predictions. |
+
+### Step 2: Load and prepare Sign Language MNIST
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+- `pd.read_csv()` reads the CSV dataset.
+- `train_df` stores training data.
+- `test_df` stores testing data.
+
+The dataset contains hand gesture images and their corresponding alphabet labels.
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+**Explanation:**
+
+- `drop(columns="label")` removes the label column and keeps only image pixels.
+- `to_numpy()` converts the data into a NumPy array.
+- `dtype="float32"` converts values into decimal numbers.
+- `/ 255.0` normalizes pixel values from 0–255 to 0–1.
+
+**Why do we normalize?**
+
+Normalization helps the model learn faster and makes training more stable.
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+- `LabelEncoder()` creates a label encoder.
+- `fit_transform()` learns the training labels and converts them into numerical values.
+- `transform()` converts testing labels using the same encoding.
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+Converts numerical labels into alphabet characters.
+
+- `chr()` converts an ASCII value into a character.
+- `65` is the ASCII value of capital A.
+
+For example:
+- 0 → A
+- 1 → B
+- 2 → C
+
+The dataset contains 24 alphabet classes because J and Z are excluded.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image dimensions:
+
+- 28 = height.
+- 28 = width.
+- 1 = grayscale channel.
+
+### Step 3: Reshape the images
+
+```python
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+```
+
+Initially, each image contains 784 pixel values in a single row.
+
+CNN requires images in the format:
+
+`Height × Width × Channels`
+
+Therefore, we reshape each image into `28 × 28 × 1`.
+
+**What does `-1` mean?**
+
+It automatically calculates the number of images based on the available data.
+
+**Why do we reshape?**
+
+CNN needs image data in height, width and channel format to perform convolution operations.
+
+### Step 4: Build the CNN model
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the total number of alphabet classes.
+
+Here, there are 24 classes.
+
+```python
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This creates the CNN architecture.
+
+**Layer-by-layer explanation:**
+
+| Layer | Explanation |
+|---|---|
+| `Input(shape=X_train.shape[1:])` | Defines input image shape as 28 × 28 × 1. |
+| `Conv2D(32, (3,3), activation="relu")` | Uses 32 filters of size 3 × 3 to extract basic image features. |
+| `MaxPooling2D((2,2))` | Reduces feature map dimensions. |
+| `Conv2D(64, (3,3), activation="relu")` | Uses 64 filters to extract more complex features. |
+| `MaxPooling2D((2,2))` | Further reduces feature map dimensions. |
+| `Flatten()` | Converts 2D feature maps into a 1D vector. |
+| `Dense(128, activation="relu")` | Fully connected layer with 128 neurons. |
+| `Dense(num_classes, activation="softmax")` | Output layer that predicts one of the 24 alphabet classes. |
+
+**Important terms:**
+
+- **Convolution:** Extracts features such as edges, lines and shapes.
+- **Max Pooling:** Keeps important information and reduces dimensions.
+- **Flatten:** Converts feature maps into a one-dimensional array.
+- **ReLU:** Converts negative values into zero.
+- **Softmax:** Calculates probabilities for all 24 classes. The class with the highest probability becomes the prediction.
+
+### Step 5: Compile and train
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Before training, we compile the model.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**What is Adam?**
+
+Adam is an optimization algorithm that adjusts model weights to improve performance.
+
+**What is sparse categorical crossentropy?**
+
+It is a loss function used for multi-class classification when target labels are represented as integers.
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+This trains the CNN model.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=10` | Trains the model for 10 complete rounds. |
+| `batch_size=128` | Processes 128 images at a time before updating weights. |
+| `verbose=0` | Hides training progress from the output. |
+
+**What is an epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**What is batch size?**
+
+The number of images processed before the model updates its weights.
+
+### Step 6: Predict test images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This is the most important step in this practical because it predicts the alphabet labels for test images.
+
+**Explanation:**
+
+- `model.predict(X_test)` makes predictions for all testing images.
+- The model returns probabilities for each of the 24 classes.
+- `np.argmax()` finds the index of the highest probability.
+- `axis=1` performs this operation row-wise, for each image.
+- `y_pred` stores the predicted class numbers.
+
+**Example:**
+
+Suppose the model gives the following probabilities for one image:
+
+| Alphabet | Probability |
+|---|---:|
+| A | 0.05 |
+| B | 0.10 |
+| C | 0.80 |
+| D | 0.05 |
+
+The highest probability is 0.80.
+
+Therefore, the predicted alphabet is **C**.
+
+**What is `argmax()`?**
+
+It returns the index of the maximum value in an array.
+
+### Step 7: Show five examples
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a figure with width 14 inches and height 4 inches.
+
+```python
+for i in range(5):
+```
+
+Runs a loop five times to display five test images.
+
+The values of `i` are 0, 1, 2, 3 and 4.
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+Selects the test image at position `i` and reshapes it into 28 × 28 × 1 format.
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+Divides the figure into:
+
+- 1 row.
+- 5 columns.
+- `i + 1` selects the position of the current image.
+
+```python
+if image_shape[-1] == 1:
+    plt.imshow(image.squeeze(), cmap="gray")
+else:
+    plt.imshow(image)
+```
+
+**Explanation:**
+
+- Checks whether the image has one channel.
+- `image.squeeze()` removes the unnecessary channel dimension.
+- `cmap="gray"` displays the image in grayscale.
+- `imshow()` displays the image.
+
+The `else` part displays an image normally if it has multiple channels.
+
+```python
+plt.title(f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}")
+```
+
+Displays the actual and predicted alphabet above each image.
+
+- `y_test[i]` gives the actual numerical label.
+- `y_pred[i]` gives the predicted numerical label.
+- `class_names[...]` converts the numerical labels into alphabet characters.
+- `\n` moves the predicted label to the next line.
+
+Example:
+
+```text
+Actual: A
+Predicted: A
+```
+
+If both are the same, the prediction is correct.
+
+If they are different, the model has made an incorrect prediction.
+
+```python
+plt.axis("off")
+```
+
+Hides the X-axis and Y-axis.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `tight_layout()` adjusts spacing between images.
+- `show()` displays all five images.
+
+---
+
+## 3. Understanding the Output
+
+The output displays five hand gesture images.
+
+Each image shows two labels:
+
+| Label | Meaning |
+|---|---|
+| Actual | Correct alphabet given in the dataset. |
+| Predicted | Alphabet predicted by the CNN model. |
+
+**How to identify correct predictions?**
+
+- Actual = Predicted → Correct prediction.
+- Actual ≠ Predicted → Incorrect prediction.
+
+For example:
+
+| Image | Actual | Predicted | Result |
+|---|---|---|---|
+| 1 | A | A | Correct |
+| 2 | B | B | Correct |
+| 3 | C | D | Incorrect |
+| 4 | D | D | Correct |
+| 5 | E | E | Correct |
+
+*This table is only an illustrative example; your actual output depends on the model's predictions.*
+
+---
+
+# 4. Important Viva Questions and Answers
+
+### Basic CNN Questions
+
+**Q1. What is CNN?**  
+CNN stands for Convolutional Neural Network. It is a deep learning model mainly used for image recognition and classification.
+
+**Q2. Why is CNN used in this practical?**  
+CNN automatically extracts important features from hand gesture images and classifies them into alphabets.
+
+**Q3. What is the full form of CNN?**  
+Convolutional Neural Network.
+
+**Q4. What is a convolution layer?**  
+It extracts important features from images using filters.
+
+**Q5. What is a filter in CNN?**  
+A filter is a small matrix that moves over an image to detect features such as edges and patterns.
+
+**Q6. What is Max Pooling?**  
+Max Pooling selects the maximum value from a particular region and reduces feature map size.
+
+**Q7. What is Flatten?**  
+Flatten converts 2D feature maps into a 1D array.
+
+**Q8. What is ReLU?**  
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+**Q9. What is Softmax?**  
+Softmax converts output values into probabilities for different classes.
+
+### Dataset Questions
+
+**Q10. Which dataset is used in this practical?**  
+Sign Language MNIST dataset.
+
+**Q11. What is the image size?**  
+28 × 28 pixels.
+
+**Q12. Is the dataset grayscale or RGB?**  
+It is a grayscale dataset.
+
+**Q13. How many classes are present?**  
+24 classes.
+
+**Q14. Why are J and Z excluded?**  
+Because their gestures require movement and cannot be represented properly using a single static image.
+
+**Q15. Why do we divide pixel values by 255?**  
+To normalize pixel values from 0–255 to 0–1.
+
+**Q16. Why do we reshape the images?**  
+CNN requires images in height, width and channel format.
+
+### Prediction Questions
+
+**Q17. What is prediction in machine learning?**  
+Prediction means using a trained model to identify the output for new or unseen data.
+
+**Q18. Which function is used to predict test images?**  
+`model.predict()`.
+
+**Q19. What is `np.argmax()`?**  
+It returns the index of the maximum value in an array.
+
+**Q20. Why do we use `axis=1` in argmax?**  
+It finds the highest probability separately for each test image.
+
+**Q21. What is `y_pred`?**  
+It stores the predicted class labels of the testing images.
+
+**Q22. What is `y_test`?**  
+It stores the actual class labels of the testing images.
+
+**Q23. What is the difference between actual and predicted labels?**  
+Actual labels are the correct labels from the dataset, whereas predicted labels are generated by the trained model.
+
+**Q24. How do you know whether the prediction is correct?**  
+If actual and predicted labels are the same, the prediction is correct.
+
+**Q25. Why do we display only five images?**  
+To visually check and compare actual and predicted labels for five test samples as required in the practical.
+
+### Training Questions
+
+**Q26. What is an epoch?**  
+One complete pass through the training dataset.
+
+**Q27. What is batch size?**  
+The number of images processed before updating model weights.
+
+**Q28. Which optimizer is used?**  
+Adam optimizer.
+
+**Q29. Which loss function is used?**  
+Sparse categorical crossentropy.
+
+**Q30. Why is sparse categorical crossentropy used?**  
+Because this is a multi-class classification problem with integer class labels.
+
+**Q31. What is the purpose of `model.fit()`?**  
+It trains the model using the training images and their actual labels.
+
+**Q32. What is the purpose of `model.evaluate()`?**  
+It evaluates the trained model's performance on testing data. This particular chit does not use it.
+
+**Q33. What is overfitting?**  
+When a model performs very well on training data but poorly on unseen data.
+
+---
+
+## 5. Difference Between Chit 8 and Chit 9
+
+Both practicals use almost the same CNN architecture, but their final objectives are different.
+
+| Chit 8 | Chit 9 |
+|---|---|
+| Displays training and testing accuracy. | Predicts alphabet labels for test images. |
+| Displays accuracy and loss graphs. | Displays five test images. |
+| Uses `model.evaluate()`. | Uses `model.predict()`. |
+| Stores training history. | Does not store training history. |
+| Focuses on model performance. | Focuses on actual and predicted labels. |
+
+**Most important difference in code:**
+
+Chit 8:
+```python
+history = model.fit(...)
+```
+
+Chit 9:
+```python
+model.fit(...)
+```
+
+Chit 8 stores training history because it needs accuracy and loss graphs. Chit 9 only needs to train the model before making predictions.
+
+---
+
+## 6. Quick Revision for External Viva
+
+If the examiner asks, **"Explain this practical,"** you can answer:
+
+> In this practical, I developed a CNN model for Sign Language alphabet recognition using the Sign Language MNIST dataset. First, I loaded the training and testing datasets and normalized the pixel values between 0 and 1. Then, I reshaped the images into 28 × 28 × 1 format. I created a CNN model using convolution, max pooling, flatten and dense layers. I compiled the model using Adam optimizer and sparse categorical crossentropy loss function. After training the model for 10 epochs, I used `model.predict()` to predict the alphabet labels of test images. Finally, I displayed five test images along with their actual and predicted alphabet labels.
+
+### Remember These 10 Points
+
+1. **Dataset:** Sign Language MNIST.
+2. **Image size:** 28 × 28.
+3. **Channels:** 1 (grayscale).
+4. **Classes:** 24.
+5. **Normalization:** Divide by 255.
+6. **Model:** CNN.
+7. **Optimizer:** Adam.
+8. **Loss:** Sparse categorical crossentropy.
+9. **Prediction:** `model.predict()`.
+10. **Highest probability:** Selected using `np.argmax()`.
+
+**Code verdict:** Your code is correct for the given practical. It trains the CNN, predicts test labels and displays five images with their actual and predicted alphabets.

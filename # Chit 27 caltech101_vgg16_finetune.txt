@@ -606,3 +606,1044 @@ Three of these five displayed predictions are correct. The **91.30%** test accur
 
 20. **Why do the five displayed predictions not all need to be correct when test accuracy is 91.30%?**  
     The five are just a small sample; the test accuracy is measured over the entire test set.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 27: Caltech-101 VGG16 Fine-Tuning
+
+## 1. Aim
+
+To develop an object classification model using **Transfer Learning with the pre-trained VGG16 model** and the Caltech-101 dataset.
+
+We select five object categories, preprocess the images, add a custom classification head, train the model and predict the object categories of test images.
+
+---
+
+# 2. Understanding the Practical
+
+### What is Caltech-101?
+
+Caltech-101 is an image dataset containing approximately 101 object categories, such as:
+- Airplanes
+- Ant
+- Camera
+- Cannon
+- Chair
+- Butterfly
+- Motorbike
+
+Each image belongs to a particular object category.
+
+In this practical, we select only five categories:
+
+| Label | Category |
+|---|---|
+| 0 | Airplanes |
+| 1 | Ant |
+| 2 | Camera |
+| 3 | Cannon |
+| 4 | Chair |
+
+### What is Transfer Learning?
+
+Transfer Learning means using a model that has already been trained on a large dataset and adapting it to solve a new classification problem.
+
+Here:
+- VGG16 is already trained on ImageNet.
+- It has learned to recognize features such as edges, shapes, textures and objects.
+- We reuse these learned features.
+- We add our own classification layers to recognize five Caltech-101 categories.
+
+**Simple example:** Instead of teaching a computer everything about image recognition from the beginning, we use the knowledge of an already-trained model and teach it to identify five new categories.
+
+### What is VGG16?
+
+VGG16 is a pre-trained Convolutional Neural Network (CNN) developed by the Visual Geometry Group at Oxford.
+
+- It has 16 weight layers in its original architecture.
+- It uses convolutional layers to extract image features.
+- It was trained on ImageNet.
+- It can be used for image classification and feature extraction.
+
+---
+
+# 3. Code Explanation Step by Step
+
+## Step 1: Install and Import Libraries
+
+```python
+%pip install tensorflow tensorflow-datasets scikit-learn
+```
+
+This installs the required libraries.
+
+| Library | Purpose |
+|---|---|
+| TensorFlow | Building and training the deep learning model |
+| TensorFlow Datasets | Loading the Caltech-101 dataset |
+| Scikit-learn | Splitting the dataset into training, validation and testing sets |
+| NumPy | Numerical operations |
+| Matplotlib | Displaying graphs |
+
+```python
+import numpy as np
+import tensorflow as tf
+import tensorflow_datasets as tfds
+import matplotlib.pyplot as plt
+from tensorflow.keras import layers, Model
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from sklearn.model_selection import train_test_split
+```
+
+**Important imports:**
+
+- `numpy`: Handles image arrays and numerical calculations.
+- `tensorflow`: Provides tools to build and train neural networks.
+- `tensorflow_datasets`: Loads ready-made datasets.
+- `matplotlib.pyplot`: Displays training graphs.
+- `layers`: Provides neural network layers such as Dense, Dropout and GlobalAveragePooling2D.
+- `Model`: Creates a deep learning model.
+- `VGG16`: Loads the pre-trained VGG16 architecture.
+- `preprocess_input`: Prepares images according to VGG16's expected input format.
+- `train_test_split`: Divides data into separate sets.
+
+### Setting random seed
+
+```python
+SEED = 42
+tf.random.set_seed(SEED)
+np.random.seed(SEED)
+```
+
+- `SEED = 42`: Defines a fixed random seed.
+- `tf.random.set_seed(SEED)`: Controls TensorFlow's random operations.
+- `np.random.seed(SEED)`: Controls NumPy's random operations.
+
+**Why use a seed?**
+
+It helps make results more reproducible when the code is executed again.
+
+---
+
+## Step 2: Load the Caltech-101 Dataset
+
+```python
+(ds,), info = tfds.load(
+    "caltech101",
+    split=["train"],
+    as_supervised=True,
+    with_info=True
+)
+```
+
+This loads the Caltech-101 dataset.
+
+Explanation:
+
+| Parameter | Meaning |
+|---|---|
+| `"caltech101"` | Name of the dataset |
+| `split=["train"]` | Loads the training split provided by TFDS |
+| `as_supervised=True` | Returns images and their corresponding labels |
+| `with_info=True` | Also returns dataset information |
+
+Here:
+
+- `ds` contains images and labels.
+- `info` contains information about the dataset, including category names.
+
+```python
+all_names = info.features["label"].names
+```
+
+This retrieves all category names available in the dataset.
+
+For example, it includes names such as airplanes, ant, camera and chair.
+
+---
+
+## Step 3: Select Five Categories
+
+```python
+selected_names = ["airplanes", "ant", "camera", "cannon", "chair"]
+```
+
+We select five categories from Caltech-101.
+
+```python
+missing = [name for name in selected_names if name not in all_names]
+if missing:
+    raise ValueError(f"Categories not found: {missing}")
+```
+
+This checks whether all selected category names exist in the dataset.
+
+- If all categories exist, execution continues.
+- If any category is missing, a `ValueError` is raised.
+
+```python
+selected_ids = [all_names.index(name) for name in selected_names]
+```
+
+This finds the original numerical label of each selected category.
+
+**Why is this required?**
+
+The dataset uses numerical labels internally. We need to identify the labels corresponding to our five selected categories.
+
+---
+
+## Step 4: Select Images, Resize and Encode Labels
+
+```python
+images, labels = [], []
+```
+
+Creates two empty lists:
+
+- `images`: Stores selected images.
+- `labels`: Stores their corresponding labels.
+
+```python
+for image, label in tfds.as_numpy(ds):
+```
+
+Iterates through the dataset.
+
+Each iteration provides:
+- One image.
+- Its corresponding category label.
+
+```python
+label = int(label)
+```
+
+Converts the label into an integer.
+
+```python
+if label in selected_ids:
+```
+
+Checks whether the image belongs to one of our five selected categories.
+
+```python
+images.append(tf.image.resize(image, (224, 224)).numpy())
+```
+
+Resizes the selected image to **224 × 224 pixels**.
+
+Why 224 × 224?
+
+VGG16 expects images of size 224 × 224 × 3.
+
+Here:
+- 224 = image height.
+- 224 = image width.
+- 3 = RGB colour channels.
+
+`.numpy()` converts the TensorFlow image tensor into a NumPy array.
+
+```python
+labels.append(selected_ids.index(label))
+```
+
+Assigns a new label from 0 to 4.
+
+For example:
+
+- Airplanes → 0
+- Ant → 1
+- Camera → 2
+- Cannon → 3
+- Chair → 4
+
+```python
+X = np.asarray(images, dtype=np.float32)
+y = np.asarray(labels, dtype=np.int32)
+```
+
+Converts the lists into NumPy arrays.
+
+- `X` contains the image data.
+- `y` contains the numerical labels.
+- `float32` is used for image values.
+- `int32` is used for class labels.
+
+---
+
+## Step 5: Split the Dataset
+
+```python
+X_train, X_temp, y_train, y_temp = train_test_split(
+    X, y, test_size=0.30, random_state=SEED, stratify=y
+)
+```
+
+First, the dataset is divided into:
+
+- 70% training data.
+- 30% temporary data.
+
+Explanation:
+
+| Parameter | Meaning |
+|---|---|
+| `test_size=0.30` | Keeps 30% of data for the temporary set |
+| `random_state=SEED` | Makes the split reproducible |
+| `stratify=y` | Maintains class proportions in the split |
+
+```python
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.50, random_state=SEED, stratify=y_temp
+)
+```
+
+The temporary 30% is divided equally into:
+
+- 15% validation data.
+- 15% testing data.
+
+### Final dataset division
+
+| Dataset | Percentage | Purpose |
+|---|---:|---|
+| Training | 70% | Trains the model |
+| Validation | 15% | Checks model performance during training |
+| Testing | 15% | Evaluates final model performance |
+
+**Remember:**
+
+- Training data teaches the model.
+- Validation data monitors the model during training.
+- Testing data checks the final performance on unseen data.
+
+---
+
+## Step 6: Prepare the Dataset
+
+```python
+def make_dataset(images, labels, shuffle=False):
+```
+
+Defines a function named `make_dataset`.
+
+It prepares images and labels before feeding them into the model.
+
+```python
+ds = tf.data.Dataset.from_tensor_slices((images, labels))
+```
+
+Creates a TensorFlow dataset from images and labels.
+
+```python
+if shuffle:
+    ds = ds.shuffle(len(images), seed=SEED)
+```
+
+Shuffles the training data.
+
+**Why shuffle?**
+
+It prevents the model from learning the data in a fixed order.
+
+```python
+def prepare(image, label):
+```
+
+Defines another function to preprocess each image and label.
+
+```python
+image = preprocess_input(image)
+```
+
+Prepares the image according to VGG16's preprocessing requirements.
+
+VGG16 preprocessing:
+- Converts RGB channel order to BGR.
+- Subtracts ImageNet channel mean values.
+
+**Important:** We use VGG16's `preprocess_input()` instead of simply dividing the pixel values by 255.
+
+```python
+label = tf.one_hot(label, depth=len(selected_names))
+```
+
+Converts numerical labels into one-hot encoded form.
+
+For example:
+
+| Category | One-hot representation |
+|---|---|
+| Airplanes (0) | `[1, 0, 0, 0, 0]` |
+| Ant (1) | `[0, 1, 0, 0, 0]` |
+| Camera (2) | `[0, 0, 1, 0, 0]` |
+| Cannon (3) | `[0, 0, 0, 1, 0]` |
+| Chair (4) | `[0, 0, 0, 0, 1]` |
+
+`depth=5` means there are five output classes.
+
+```python
+return image, label
+```
+
+Returns the processed image and its one-hot encoded label.
+
+```python
+return ds.map(prepare).batch(16).prefetch(tf.data.AUTOTUNE)
+```
+
+This performs three operations:
+
+1. `map(prepare)`: Applies preprocessing to every image and label.
+2. `batch(16)`: Groups 16 images into one batch.
+3. `prefetch(tf.data.AUTOTUNE)`: Prepares the next batch while the current batch is being processed, improving efficiency.
+
+```python
+train_ds = make_dataset(X_train, y_train, shuffle=True)
+val_ds = make_dataset(X_val, y_val)
+test_ds = make_dataset(X_test, y_test)
+```
+
+Creates three datasets:
+
+- `train_ds`: Training dataset with shuffling.
+- `val_ds`: Validation dataset.
+- `test_ds`: Testing dataset.
+
+---
+
+## Step 7: Load VGG16 and Freeze Lower Convolutional Layers
+
+```python
+base_model = VGG16(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+```
+
+Loads the pre-trained VGG16 model.
+
+Explanation:
+
+| Parameter | Meaning |
+|---|---|
+| `weights="imagenet"` | Loads weights already trained on ImageNet |
+| `include_top=False` | Removes the original fully connected classification layers |
+| `input_shape=(224,224,3)` | Specifies the input image dimensions |
+
+**Why remove the original classification layers?**
+
+The original VGG16 classification head is designed for ImageNet's 1,000 classes.
+
+Our practical has only five categories, so we remove the original classifier and create a custom classification head.
+
+### Freezing layers
+
+```python
+for layer in base_model.layers:
+    layer.trainable = layer.name.startswith("block5")
+```
+
+This is a very important part of the practical.
+
+It controls which VGG16 layers can be trained.
+
+- Lower convolutional blocks (block1 to block4) are frozen.
+- Block5 layers are trainable.
+
+**What does freezing mean?**
+
+Freezing means keeping the pre-trained weights unchanged during training.
+
+Why freeze lower layers?
+
+Lower layers learn general image features such as:
+- Edges
+- Lines
+- Shapes
+- Textures
+
+These features are useful for many image classification tasks.
+
+The last convolutional block contains more advanced features, so we allow it to be fine-tuned for our selected categories.
+
+**Important viva point:** This practical uses partial fine-tuning, not complete freezing of VGG16.
+
+---
+
+## Step 8: Add the Custom Classification Head
+
+This is the most important step.
+
+```python
+inputs = layers.Input(shape=(224, 224, 3))
+```
+
+Defines the input layer.
+
+It accepts RGB images of size 224 × 224.
+
+```python
+x = base_model(inputs)
+```
+
+Passes the input image through the pre-trained VGG16 model.
+
+VGG16 extracts useful features from the image.
+
+```python
+x = layers.GlobalAveragePooling2D()(x)
+```
+
+Applies Global Average Pooling.
+
+**What is GlobalAveragePooling2D?**
+
+It converts each feature map into a single average value.
+
+For VGG16 with a 224 × 224 input, the final convolutional output is generally 7 × 7 × 512.
+
+Global Average Pooling converts it into a vector of 512 features.
+
+**Why use it?**
+
+- Reduces the number of parameters.
+- Reduces the size of the feature representation.
+- Helps reduce overfitting.
+
+```python
+x = layers.Dense(256, activation="relu")(x)
+```
+
+Adds the first fully connected layer with 256 neurons.
+
+- `Dense(256)`: Creates 256 neurons.
+- `relu`: Applies the ReLU activation function.
+
+ReLU formula:
+
+`f(x) = max(0, x)`
+
+It converts negative values into zero and keeps positive values unchanged.
+
+```python
+x = layers.Dense(128, activation="relu")(x)
+```
+
+Adds the second Dense layer with 128 neurons and ReLU activation.
+
+It learns more useful combinations of extracted features.
+
+```python
+x = layers.Dropout(0.5)(x)
+```
+
+Adds a Dropout layer.
+
+**What is Dropout?**
+
+Dropout randomly disables 50% of neurons during training.
+
+Why use Dropout?
+
+- Prevents overfitting.
+- Reduces dependency on particular neurons.
+- Improves the model's ability to generalize.
+
+```python
+outputs = layers.Dense(len(selected_names), activation="softmax")(x)
+```
+
+Creates the output layer.
+
+- `len(selected_names)` = 5 output neurons.
+- `softmax` calculates the probability of each class.
+
+For example:
+
+| Category | Predicted probability |
+|---|---:|
+| Airplanes | 0.85 |
+| Ant | 0.03 |
+| Camera | 0.04 |
+| Cannon | 0.02 |
+| Chair | 0.06 |
+
+The model predicts **Airplanes** because it has the highest probability.
+
+```python
+model = Model(inputs, outputs)
+```
+
+Combines the VGG16 base model and custom classification head into one complete model.
+
+### Custom classification head architecture
+
+```text
+Input Image (224 × 224 × 3)
+             |
+             v
+       Pre-trained VGG16
+             |
+             v
+ GlobalAveragePooling2D
+             |
+             v
+     Dense Layer (256)
+          ReLU
+             |
+             v
+     Dense Layer (128)
+          ReLU
+             |
+             v
+       Dropout (0.5)
+             |
+             v
+     Dense Layer (5)
+          Softmax
+             |
+             v
+    Predicted Object Class
+```
+
+This diagram is especially important for your viva.
+
+---
+
+## Step 9: Compile the Model
+
+```python
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+    loss="categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compiles the model before training.
+
+| Parameter | Explanation |
+|---|---|
+| Adam | Optimizer used to update model weights |
+| `learning_rate=1e-4` | Controls the size of weight updates |
+| `categorical_crossentropy` | Calculates classification error for one-hot encoded labels |
+| `accuracy` | Measures the percentage of correct predictions |
+
+**Why categorical crossentropy?**
+
+Because we have converted the class labels into one-hot encoded form using `tf.one_hot()`.
+
+Remember:
+- `categorical_crossentropy` → One-hot encoded labels.
+- `sparse_categorical_crossentropy` → Integer class labels.
+
+---
+
+## Step 10: Train the Model
+
+```python
+history = model.fit(
+    train_ds, validation_data=val_ds, epochs=5
+)
+```
+
+Trains the model using the training dataset.
+
+Explanation:
+
+- `train_ds`: Dataset used for training.
+- `validation_data=val_ds`: Dataset used to check performance after each epoch.
+- `epochs=5`: Model processes the training dataset five times.
+- `history`: Stores training and validation results.
+
+### What is an epoch?
+
+One complete pass through the entire training dataset is called one epoch.
+
+### What is validation accuracy?
+
+It measures how accurately the model predicts the validation images after each epoch.
+
+---
+
+## Step 11: Display Training and Validation Accuracy
+
+```python
+plt.plot(history.history["accuracy"], label="Training accuracy")
+plt.plot(history.history["val_accuracy"], label="Validation accuracy")
+```
+
+Plots two accuracy curves:
+
+- Training accuracy: Accuracy on training images.
+- Validation accuracy: Accuracy on validation images.
+
+```python
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.grid()
+plt.show()
+```
+
+- `xlabel()`: Sets the X-axis label.
+- `ylabel()`: Sets the Y-axis label.
+- `legend()`: Displays the names of the curves.
+- `grid()`: Displays grid lines.
+- `show()`: Displays the graph.
+
+### How to interpret the graph?
+
+- Training accuracy generally increases as the model learns.
+- Validation accuracy shows how well the model performs on unseen validation data.
+- If training accuracy increases but validation accuracy decreases, it may indicate overfitting.
+
+---
+
+## Step 12: Evaluate the Model
+
+```python
+_, test_accuracy = model.evaluate(test_ds, verbose=0)
+```
+
+Evaluates the trained model on the test dataset.
+
+- `model.evaluate()`: Calculates test loss and test accuracy.
+- `_`: Ignores the loss value.
+- `test_accuracy`: Stores the accuracy.
+- `verbose=0`: Hides the evaluation progress output.
+
+```python
+print(f"Test accuracy: {test_accuracy * 100:.2f}%")
+```
+
+Displays the test accuracy as a percentage.
+
+### Your output
+
+```text
+Test accuracy: 91.30%
+```
+
+**Meaning:** The model correctly classified approximately 91.30% of the test images.
+
+---
+
+## Step 13: Predict Five Test Images
+
+```python
+for i in range(min(5, len(X_test))):
+```
+
+Runs a loop to predict up to five test images.
+
+`min(5, len(X_test))` ensures that the loop does not try to access more images than are available.
+
+```python
+image = preprocess_input(X_test[i].copy())[None, ...]
+```
+
+Prepares the selected test image.
+
+- `X_test[i]`: Selects one test image.
+- `.copy()`: Creates a copy of the image.
+- `preprocess_input()`: Applies VGG16 preprocessing.
+- `[None, ...]`: Adds a batch dimension.
+
+VGG16 expects input in batches, even when predicting one image.
+
+```python
+probabilities = model.predict(image, verbose=0)[0]
+```
+
+Predicts the category probabilities.
+
+For example:
+
+```text
+[0.85, 0.03, 0.04, 0.02, 0.06]
+```
+
+These are the probabilities of the five selected categories.
+
+```python
+predicted = np.argmax(probabilities)
+```
+
+Returns the index of the highest probability.
+
+For example, if the highest probability is at index 0, the predicted category is Airplanes.
+
+```python
+print(
+    f"Sample {i + 1}: predicted={selected_names[predicted]} | "
+    f"actual={selected_names[y_test[i]]}"
+)
+```
+
+Displays:
+- Sample number.
+- Predicted category.
+- Actual category.
+
+### Your output
+
+```text
+Test accuracy: 91.30%
+
+Sample 1: predicted=airplanes | actual=airplanes
+Sample 2: predicted=ant | actual=chair
+Sample 3: predicted=chair | actual=chair
+Sample 4: predicted=camera | actual=camera
+Sample 5: predicted=chair | actual=ant
+```
+
+### Understanding the predictions
+
+| Sample | Predicted | Actual | Result |
+|---|---|---|---|
+| 1 | Airplanes | Airplanes | Correct |
+| 2 | Ant | Chair | Incorrect |
+| 3 | Chair | Chair | Correct |
+| 4 | Camera | Camera | Correct |
+| 5 | Chair | Ant | Incorrect |
+
+Out of these five displayed examples, three predictions are correct and two are incorrect.
+
+The overall test accuracy of 91.30% is calculated using the **entire test dataset**, not just these five images.
+
+---
+
+# 4. Important Differences: Chit 26 vs Chit 27
+
+Both practicals use VGG16 and Caltech-101, but their approaches are different.
+
+| Chit 26 – Feature Extraction | Chit 27 – Fine-Tuning |
+|---|---|
+| VGG16 is completely frozen. | Lower convolutional blocks are frozen, while block5 is trainable. |
+| VGG16 extracts features separately. | VGG16 and classifier are combined into one model. |
+| Features are stored before classifier training. | Features flow directly into the custom classifier. |
+| Uses GlobalAveragePooling2D. | Uses GlobalAveragePooling2D. |
+| Uses a single Softmax Dense layer as classifier. | Uses two ReLU Dense layers, Dropout and Softmax output. |
+| Uses sparse categorical crossentropy. | Uses categorical crossentropy. |
+| Focuses on feature extraction. | Focuses on fine-tuning and classification. |
+
+**Remember:** Chit 26 freezes the entire VGG16 model, whereas Chit 27 fine-tunes its last convolutional block.
+
+---
+
+# 5. Important External Viva Questions and Answers
+
+### Q1. What is Transfer Learning?
+Transfer Learning is a technique in which a pre-trained model is reused for a new task instead of training a model from scratch.
+
+### Q2. What is VGG16?
+VGG16 is a pre-trained CNN developed by the Visual Geometry Group at Oxford. It is used for image classification and feature extraction.
+
+### Q3. What is the full form of VGG?
+Visual Geometry Group.
+
+### Q4. Why do we use VGG16?
+We use VGG16 because it has already learned useful image features from a large dataset, reducing the training effort.
+
+### Q5. What is ImageNet?
+ImageNet is a large image dataset containing millions of images belonging to thousands of categories. VGG16 was originally trained on ImageNet.
+
+### Q6. Why do we use `include_top=False`?
+It removes the original classification layers of VGG16 so that we can add our own classifier.
+
+### Q7. What is fine-tuning?
+Fine-tuning means unfreezing some layers of a pre-trained model and training them further on a new dataset.
+
+### Q8. What is freezing a layer?
+Freezing means keeping the weights of a layer unchanged during training.
+
+### Q9. Why do we freeze lower convolutional layers?
+Because lower layers learn general features such as edges, shapes and textures that are useful for different image classification tasks.
+
+### Q10. Which VGG16 layers are trainable in this practical?
+The layers whose names start with `block5` are trainable. The other layers are frozen.
+
+### Q11. Why do we resize images to 224 × 224?
+Because the VGG16 model expects input images of size 224 × 224 pixels.
+
+### Q12. Why do we use `preprocess_input()`?
+It converts image values into the format expected by the pre-trained VGG16 model.
+
+### Q13. What is GlobalAveragePooling2D?
+It calculates the average value of each feature map and converts it into a smaller feature vector.
+
+### Q14. Why do we use Dense layers?
+Dense layers learn relationships between extracted features and help classify images into different categories.
+
+### Q15. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+### Q16. What is Dropout?
+Dropout randomly disables some neurons during training to reduce overfitting.
+
+### Q17. What does Dropout(0.5) mean?
+It means approximately 50% of the neurons are randomly disabled during each training step.
+
+### Q18. Why do we use Softmax?
+Softmax converts the output values into probabilities for all five categories.
+
+### Q19. Why do we use five output neurons?
+Because we selected five object categories.
+
+### Q20. What is one-hot encoding?
+One-hot encoding represents a category using a vector containing zeros and one, where one indicates the correct class.
+
+### Q21. Why do we use categorical crossentropy?
+Because our target labels are one-hot encoded.
+
+### Q22. What is Adam?
+Adam is an optimization algorithm that updates model weights to minimize the loss.
+
+### Q23. What is learning rate?
+Learning rate controls how much the model's weights are updated during training.
+
+### Q24. What is an epoch?
+One complete pass through the training dataset.
+
+### Q25. What is batch size?
+The number of training images processed together before updating the model weights.
+
+### Q26. What is overfitting?
+Overfitting occurs when a model performs well on training data but poorly on unseen data.
+
+### Q27. What is the difference between training and validation accuracy?
+Training accuracy measures performance on training data, while validation accuracy measures performance on separate data during training.
+
+### Q28. What is test accuracy?
+Test accuracy measures how correctly the trained model predicts images from the held-out test dataset.
+
+### Q29. What does `np.argmax()` do?
+It returns the index of the maximum value. Here, it identifies the predicted category.
+
+### Q30. Why do we use `model.predict()`?
+To predict the output probabilities or classes for new input images.
+
+---
+
+# 6. Quick Revision Table
+
+| Concept | Remember |
+|---|---|
+| Dataset | Caltech-101 |
+| Selected categories | 5 |
+| Image size | 224 × 224 |
+| Channels | 3 (RGB) |
+| Pre-trained model | VGG16 |
+| Pre-trained weights | ImageNet |
+| `include_top=False` | Removes original classifier |
+| Frozen layers | Block1 to Block4 |
+| Trainable layers | Block5 |
+| Pooling | GlobalAveragePooling2D |
+| First Dense layer | 256 neurons, ReLU |
+| Second Dense layer | 128 neurons, ReLU |
+| Dropout | 0.5 |
+| Output layer | 5 neurons, Softmax |
+| Optimizer | Adam |
+| Learning rate | 0.0001 |
+| Loss | Categorical crossentropy |
+| Epochs | 5 |
+| Batch size | 16 |
+| Test accuracy | 91.30% |
+
+---
+
+# 7. Short Oral Explanation for External Viva
+
+You can explain this practical to the examiner like this:
+
+"We have developed an object classification model using Transfer Learning with VGG16 and the Caltech-101 dataset. First, we selected five categories: airplanes, ant, camera, cannon and chair. We resized all images to 224 × 224 pixels.
+
+Then we loaded VGG16 with ImageNet pre-trained weights and removed its original classification layers. We froze the lower convolutional layers and allowed the last convolutional block to be trained.
+
+After that, we added a custom classification head containing GlobalAveragePooling2D, two Dense layers with ReLU activation, a Dropout layer and a Softmax output layer.
+
+We compiled the model using the Adam optimizer and categorical crossentropy loss. We trained it for five epochs and displayed the training and validation accuracy graph.
+
+Finally, we evaluated the model and predicted the categories of five sample test images. We obtained a test accuracy of 91.30%."
+
+---
+
+# 8. Final Verdict: Is Your Code Correct?
+
+**Yes. Your code correctly implements the requirements of Chit 27.**
+
+It covers all the requested steps:
+
+- Loads Caltech-101 and selects five categories.
+- Resizes images to 224 × 224.
+- Loads pre-trained VGG16 with ImageNet weights.
+- Removes the original classification head.
+- Freezes lower convolutional layers and fine-tunes block5.
+- Adds the required custom classification head.
+- Uses Adam and categorical crossentropy.
+- Trains the model and displays training and validation accuracy.
+- Evaluates test accuracy.
+- Predicts categories for five sample test images.
+
+**One important point for viva:** Your code uses `layer.name.startswith("block5")`, which makes the block5 layers trainable. This is how your practical performs fine-tuning.
+
+Your observed **91.30% test accuracy is a good result**, but it can vary slightly depending on the training environment and dataset.

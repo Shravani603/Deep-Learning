@@ -413,3 +413,833 @@ The model predicts **“of”** for the context `the speed transmission is`. Thi
 
 20. **Does the sample prediction test generalization to unseen text?**  
     No. `X[0]` is a training context that the model has already seen.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 29: CBOW with Two Words on Each Side
+
+## 1. Aim
+
+To construct a **Continuous Bag of Words (CBOW)** model using Python by considering a context window of two words on either side of the target word, generate training samples, train an embedding-based neural network and predict the target word from the given context.
+
+---
+
+# 2. Understanding CBOW
+
+### What is CBOW?
+
+CBOW stands for **Continuous Bag of Words**.
+
+It is a Word2Vec model used in Natural Language Processing (NLP) to predict a target word using its surrounding context words.
+
+In simple words:
+
+**CBOW takes surrounding words as input and predicts the missing middle word.**
+
+### Example
+
+Consider this sentence:
+
+"The speed of transmission is an important point."
+
+Suppose the target word is **"of"**.
+
+With a context window of two words on each side:
+
+| Position | Word |
+|---|---|
+| Left context 1 | the |
+| Left context 2 | speed |
+| Target word | of |
+| Right context 1 | transmission |
+| Right context 2 | is |
+
+Therefore:
+
+**Input:** the, speed, transmission, is
+
+**Output:** of
+
+### CBOW Architecture
+
+```text
+       Context Words
+             |
+     -----------------
+     |   |   |   |
+    the speed transmission is
+     |   |   |   |
+     -----------------
+             |
+             v
+       Embedding Layer
+             |
+             v
+    Global Average Pooling
+             |
+             v
+        Dense Layer
+             |
+             v
+          Softmax
+             |
+             v
+       Predicted Word
+            "of"
+```
+
+---
+
+# 3. Code Explanation Step by Step
+
+## Step 1: Prepare the Text Corpus
+
+```python
+import re
+import numpy as np
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Embedding, GlobalAveragePooling1D, Dense
+```
+
+These libraries are imported for text preprocessing and building the neural network.
+
+| Library / Function | Purpose |
+|---|---|
+| `re` | Performs text cleaning using regular expressions |
+| `numpy` | Handles numerical arrays |
+| `Sequential` | Creates a neural network layer by layer |
+| `Input` | Defines the input shape |
+| `Embedding` | Converts word indexes into dense vectors |
+| `GlobalAveragePooling1D` | Calculates the average of word vectors |
+| `Dense` | Creates a fully connected layer |
+
+### Load the text file
+
+```python
+with open("document3.txt", encoding="utf-8") as file:
+    text = file.read()
+```
+
+- `open()` opens the text file.
+- `"document3.txt"` is the input file.
+- `encoding="utf-8"` supports standard text characters.
+- `file.read()` reads the complete file.
+- The content is stored in the variable `text`.
+
+### Clean the text
+
+```python
+text = re.sub(r"[^a-z\s]", " ", text.lower())
+```
+
+This line performs text preprocessing.
+
+Let's understand it:
+
+- `text.lower()` converts all text into lowercase.
+- `re.sub()` replaces unwanted characters.
+- `r"[^a-z\s]"` is a regular expression.
+
+Meaning:
+- `a-z`: Allows lowercase English letters.
+- `\s`: Allows whitespace, such as spaces and newlines.
+- `^` inside the square brackets means NOT.
+
+Therefore, all characters other than lowercase letters and whitespace are replaced with spaces.
+
+**Example:**
+
+Before:
+```text
+The Speed of Transmission is Important!
+```
+
+After:
+```text
+the speed of transmission is important
+```
+
+### Tokenization
+
+```python
+words = text.split()
+```
+
+Tokenization means splitting text into individual words.
+
+Example:
+
+```text
+"the speed of transmission"
+```
+
+Becomes:
+
+```python
+['the', 'speed', 'of', 'transmission']
+```
+
+### Create vocabulary
+
+```python
+vocabulary = sorted(set(words))
+```
+
+- `set(words)` removes duplicate words.
+- `sorted()` arranges the unique words alphabetically.
+
+The vocabulary contains all unique words in the document.
+
+### Create word-to-index dictionary
+
+```python
+word_to_id = {word: i for i, word in enumerate(vocabulary)}
+```
+
+Assigns a unique numerical index to every word.
+
+Example:
+
+```python
+{
+    'a': 0,
+    'an': 1,
+    'and': 2,
+    'appear': 3
+}
+```
+
+Why convert words into numbers?
+
+Neural networks cannot directly process text words. They require numerical input.
+
+### Create index-to-word dictionary
+
+```python
+id_to_word = {i: word for word, i in word_to_id.items()}
+```
+
+Converts numerical indexes back into words.
+
+Example:
+
+```python
+{
+    0: 'a',
+    1: 'an',
+    2: 'and',
+    3: 'appear'
+}
+```
+
+This is useful when displaying predicted words.
+
+```python
+print("Vocabulary:", vocabulary)
+```
+
+Displays the complete vocabulary.
+
+---
+
+## Step 2: Generate Context and Target Pairs
+
+This is the most important step in CBOW.
+
+```python
+window_size = 2
+contexts, targets = [], []
+```
+
+- `window_size = 2`: Selects two words on the left and two words on the right.
+- `contexts`: Stores surrounding words.
+- `targets`: Stores the middle words to be predicted.
+
+Therefore, each context contains:
+
+**2 left words + 2 right words = 4 context words.**
+
+### Generate training samples
+
+```python
+for i in range(window_size, len(words) - window_size):
+```
+
+This loop moves through the document and selects each word as a possible target.
+
+- `len(words)` gives the total number of words.
+- `window_size` prevents selecting words that do not have two surrounding words on both sides.
+
+Why does the loop start from 2?
+
+Because the first two words do not have two words before them.
+
+Why does it stop before `len(words)-2`?
+
+Because the last two words do not have two words after them.
+
+### Select context words
+
+```python
+context_words = words[i-window_size:i] + words[i+1:i+window_size+1]
+```
+
+This selects two words before and two words after the current target word.
+
+Let's understand using an example:
+
+Sentence:
+
+```text
+the speed of transmission is an important point
+```
+
+Suppose the current target word is `of`.
+
+Its index is `2`.
+
+**Left context:**
+
+```python
+words[i-window_size:i]
+```
+
+Becomes:
+
+```python
+words[0:2]
+```
+
+Result:
+
+```python
+['the', 'speed']
+```
+
+**Right context:**
+
+```python
+words[i+1:i+window_size+1]
+```
+
+Becomes:
+
+```python
+words[3:5]
+```
+
+Result:
+
+```python
+['transmission', 'is']
+```
+
+Both are combined using `+`.
+
+Final context:
+
+```python
+['the', 'speed', 'transmission', 'is']
+```
+
+### Store context words as numerical indexes
+
+```python
+contexts.append([word_to_id[word] for word in context_words])
+```
+
+Converts all four context words into their numerical indexes and stores them in `contexts`.
+
+### Store target word
+
+```python
+targets.append(word_to_id[words[i]])
+```
+
+Stores the numerical index of the middle word.
+
+For example:
+
+```text
+Context: the, speed, transmission, is
+Target: of
+```
+
+### Convert into NumPy arrays
+
+```python
+X = np.array(contexts, dtype="int32")
+y = np.array(targets, dtype="int32")
+```
+
+- `X` contains the context word indexes.
+- `y` contains the target word indexes.
+- `int32` stores the values as integers.
+
+### Display first five training samples
+
+```python
+for i in range(min(5, len(X))):
+    print([id_to_word[index] for index in X[i]], "->", id_to_word[y[i]])
+```
+
+This displays the first five context-target pairs.
+
+- `range()` runs the loop.
+- `min(5, len(X))` ensures no more than five samples are displayed.
+- `id_to_word[index]` converts indexes back into words.
+- `->` separates the context from the target.
+
+### Your output
+
+```text
+['the', 'speed', 'transmission', 'is'] -> of
+
+['speed', 'of', 'is', 'an'] -> transmission
+
+['of', 'transmission', 'an', 'important'] -> is
+
+['transmission', 'is', 'important', 'point'] -> an
+
+['is', 'an', 'point', 'of'] -> important
+```
+
+**Important:** Each line contains four context words and one target word.
+
+---
+
+## Step 3: Train the CBOW Neural Network
+
+```python
+embedding_size = 16
+```
+
+Defines the size of the word embedding vector.
+
+Each word is represented by a vector containing 16 numerical values.
+
+### Create the model
+
+```python
+model = Sequential([
+    Input(shape=(2 * window_size,)),
+    Embedding(input_dim=len(vocabulary), output_dim=embedding_size),
+    GlobalAveragePooling1D(),
+    Dense(len(vocabulary), activation="softmax")
+])
+```
+
+Let's understand each layer.
+
+### 1. Input Layer
+
+```python
+Input(shape=(2 * window_size,))
+```
+
+Defines the input size.
+
+Since the window size is 2:
+
+```text
+2 × 2 = 4
+```
+
+Therefore, the model accepts four context word indexes.
+
+### 2. Embedding Layer
+
+```python
+Embedding(input_dim=len(vocabulary), output_dim=embedding_size)
+```
+
+Converts numerical word indexes into dense word vectors.
+
+Parameters:
+
+| Parameter | Meaning |
+|---|---|
+| `input_dim` | Total number of unique words in vocabulary |
+| `output_dim` | Number of values in each embedding vector (16) |
+
+For example:
+
+```text
+Word index → Embedding vector
+
+the → [0.12, 0.34, 0.21, ...]
+speed → [0.42, 0.18, 0.53, ...]
+```
+
+These vectors are learned during training.
+
+### 3. GlobalAveragePooling1D
+
+```python
+GlobalAveragePooling1D()
+```
+
+Calculates the average of the embedding vectors of all four context words.
+
+**Example:**
+
+Suppose the four context words have embedding vectors:
+
+```text
+Word 1 → [1, 2]
+Word 2 → [3, 4]
+Word 3 → [5, 6]
+Word 4 → [7, 8]
+```
+
+Average:
+
+```text
+[4, 5]
+```
+
+This produces one combined context representation.
+
+**Why is it used?**
+
+CBOW uses the surrounding words together to understand the context and predict the target word.
+
+### 4. Dense Output Layer
+
+```python
+Dense(len(vocabulary), activation="softmax")
+```
+
+- Creates one output neuron for every word in the vocabulary.
+- Softmax converts the output values into probabilities.
+- The word with the highest probability is selected as the predicted target.
+
+### Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+| Parameter | Meaning |
+|---|---|
+| `optimizer="adam"` | Updates model weights during training |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error when target labels are integer indexes |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions |
+
+**Why sparse categorical crossentropy?**
+
+Because target words are stored as integer indexes, not one-hot encoded vectors.
+
+### Train the model
+
+```python
+history = model.fit(X, y, epochs=100, verbose=0)
+```
+
+- `X`: Context word indexes.
+- `y`: Target word indexes.
+- `epochs=100`: The model processes the training samples 100 times.
+- `verbose=0`: Hides training progress.
+- `history`: Stores training information such as loss and accuracy.
+
+### Display final training loss
+
+```python
+print("Final training loss:", round(history.history["loss"][-1], 4))
+```
+
+Explanation:
+
+- `history.history["loss"]`: Contains loss values from every epoch.
+- `[-1]`: Selects the loss of the final epoch.
+- `round(..., 4)`: Rounds the value to four decimal places.
+
+Your output:
+
+```text
+Final training loss: 2.95
+```
+
+**What is loss?**
+
+Loss measures how far the model's predictions are from the correct target words.
+
+Generally, lower loss indicates better learning on the training data.
+
+---
+
+## Step 4: Predict the Target Word
+
+```python
+sample_context = X[0]
+```
+
+Selects the first context sample from the training data.
+
+For your output, it represents:
+
+```text
+the, speed, transmission, is
+```
+
+```python
+prediction = model.predict(sample_context.reshape(1, -1), verbose=0)
+```
+
+Predicts the target word.
+
+- `model.predict()`: Generates prediction probabilities.
+- `reshape(1, -1)`: Converts the input into a batch containing one sample.
+- `verbose=0`: Hides prediction progress.
+
+Why reshape?
+
+The model expects input in batch format.
+
+Original shape:
+
+```text
+(4,)
+```
+
+After reshaping:
+
+```text
+(1, 4)
+```
+
+This means one sample containing four context words.
+
+```python
+predicted_word = id_to_word[int(np.argmax(prediction[0]))]
+```
+
+This finds the predicted word.
+
+Explanation:
+
+- `prediction[0]`: Gets the probability values for the sample.
+- `np.argmax()`: Finds the index of the highest probability.
+- `int()`: Converts the index into an integer.
+- `id_to_word[]`: Converts the index into its corresponding word.
+
+```python
+print("Context:", [id_to_word[index] for index in sample_context])
+print("Predicted target:", predicted_word)
+```
+
+Displays the input context and predicted word.
+
+### Your output
+
+```text
+Context: ['the', 'speed', 'transmission', 'is']
+
+Predicted target: of
+```
+
+The actual target word for this context is also `of`, so the prediction is correct.
+
+---
+
+# 4. Important Viva Questions and Answers
+
+### Q1. What is the full form of CBOW?
+Continuous Bag of Words.
+
+### Q2. What is CBOW?
+CBOW is a Word2Vec model that predicts a target word using its surrounding context words.
+
+### Q3. What is NLP?
+NLP stands for Natural Language Processing. It enables computers to understand and process human language.
+
+### Q4. What is Word2Vec?
+Word2Vec is a technique used to convert words into numerical vector representations.
+
+### Q5. What is a context window?
+A context window specifies how many surrounding words are considered for predicting the target word.
+
+### Q6. What is the window size in this practical?
+The window size is 2, meaning two words on the left and two words on the right.
+
+### Q7. How many context words are used?
+Four context words.
+
+### Q8. What is a target word?
+The target word is the middle word that the model needs to predict.
+
+### Q9. What is vocabulary?
+Vocabulary is the collection of all unique words present in the text corpus.
+
+### Q10. Why do we convert words into numbers?
+Neural networks work with numerical values, so words must be converted into numerical indexes.
+
+### Q11. What is tokenization?
+Tokenization is the process of splitting text into individual words or tokens.
+
+### Q12. What is an embedding?
+An embedding is a numerical vector representation of a word.
+
+### Q13. What is the purpose of the Embedding layer?
+It converts word indexes into dense vectors that the model can learn during training.
+
+### Q14. What is the embedding size in this practical?
+16.
+
+### Q15. What is GlobalAveragePooling1D?
+It calculates the average of the embedding vectors of all context words.
+
+### Q16. Why do we use Softmax?
+Softmax converts output values into probabilities for all words in the vocabulary.
+
+### Q17. Why do we use Adam optimizer?
+Adam updates model weights to reduce prediction error.
+
+### Q18. What is sparse categorical crossentropy?
+It is a loss function used for multi-class classification when target labels are provided as integer values.
+
+### Q19. What is an epoch?
+One complete pass through the training dataset.
+
+### Q20. What is loss?
+Loss measures the difference between predicted output and actual output.
+
+### Q21. What does `np.argmax()` do?
+It returns the index of the highest value.
+
+### Q22. What is the difference between CBOW and Skip-gram?
+
+| CBOW | Skip-gram |
+|---|---|
+| Predicts the target word from context words. | Predicts surrounding context words from the target word. |
+| Context words are input. | Target word is input. |
+| Target word is output. | Context words are output. |
+
+### Q23. Why is CBOW called Bag of Words?
+Because it combines the context word representations, generally without considering their individual positions or order in the pooling operation.
+
+### Q24. What is the purpose of `id_to_word`?
+It converts numerical indexes back into their corresponding words.
+
+### Q25. What is the purpose of `word_to_id`?
+It converts words into unique numerical indexes.
+
+### Q26. Why do we use `re.sub()`?
+To remove unwanted characters and clean the text.
+
+### Q27. Why do we use `set()`?
+To remove duplicate words while creating the vocabulary.
+
+### Q28. Why do we use `shuffle` or `sorted` for vocabulary?
+In this code, `sorted()` arranges the unique vocabulary alphabetically, giving a consistent word-index mapping for the same text.
+
+### Q29. What is the difference between CBOW and normal text classification?
+CBOW predicts a missing target word using surrounding words, whereas text classification assigns a category or label to an entire text.
+
+### Q30. What are applications of CBOW?
+- Word prediction.
+- Language modelling.
+- Text processing.
+- Semantic similarity.
+- NLP applications.
+
+---
+
+# 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Model | CBOW |
+| Full form | Continuous Bag of Words |
+| Technique | Word2Vec |
+| Dataset | `document3.txt` |
+| Window size | 2 |
+| Left context words | 2 |
+| Right context words | 2 |
+| Total context words | 4 |
+| Target word | Middle word |
+| Embedding size | 16 |
+| Pooling | GlobalAveragePooling1D |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss | Sparse categorical crossentropy |
+| Epochs | 100 |
+| Prediction | `of` |
+| Final training loss | 2.95 |
+
+---
+
+# 6. Short Oral Explanation for External Viva
+
+"We have implemented a Continuous Bag of Words model using Python and TensorFlow. First, we load a text file and preprocess it by converting the text into lowercase, removing unwanted characters and tokenizing it into words.
+
+Then we create a vocabulary and assign a unique numerical index to each word.
+
+We use a context window of two words on either side of the target word. Therefore, four context words are used to predict one middle word.
+
+Next, we create an embedding-based neural network containing an Embedding layer, GlobalAveragePooling1D and a Dense Softmax output layer.
+
+We compile the model using Adam optimizer and sparse categorical crossentropy loss and train it for 100 epochs.
+
+Finally, we provide context words to the model and predict the target word. In our output, the context is 'the speed transmission is' and the predicted target word is 'of'."
+
+---
+
+# 7. Final Verdict: Is Your Code Correct?
+
+**Yes, your code correctly implements the CBOW model with two words on each side of the target word.**
+
+It satisfies all the requirements:
+
+- Loads and preprocesses the text corpus.
+- Creates a vocabulary and word-index mappings.
+- Generates four context words for each target.
+- Creates training samples.
+- Builds an embedding-based neural network.
+- Trains using Adam and sparse categorical crossentropy.
+- Predicts the target word from the given context.
+
+### One important observation about your output
+
+Your final training loss is `2.95`, which is not necessarily evidence of highly accurate learning. The prediction of `of` is correct for the displayed sample, but this alone does not prove that the model has learned all target words accurately.
+
+Also, this is a small corpus and the model is trained for 100 epochs. Its performance may be limited by the amount of training data.
+
+**For your practical exam, your implementation is correct and demonstrates the CBOW working process.**

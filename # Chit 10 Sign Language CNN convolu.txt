@@ -379,3 +379,511 @@ The model classified **90.94% of the test images correctly**. Test accuracy meas
 
 28. **What is the difference between loss and accuracy?**  
     Loss measures prediction error; accuracy measures the fraction of predictions that are correct.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 10: Sign Language CNN – Convolutional Feature Extraction
+
+## 1. Aim
+
+To implement a **Convolutional Neural Network (CNN)** to extract features from grayscale hand gesture images using convolution and max-pooling layers, classify the images into alphabets and display the testing accuracy.
+
+## 2. Explanation of the Code
+
+### Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+```
+
+| Library / Function | Purpose |
+|---|---|
+| `numpy` | Performs numerical operations on arrays. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input image shape. |
+| `Dense` | Creates fully connected layers. |
+| `pandas` | Reads and handles CSV datasets. |
+| `Conv2D` | Extracts features from images using filters. |
+| `MaxPooling2D` | Reduces feature map dimensions. |
+| `Flatten` | Converts feature maps into a 1D array. |
+| `LabelEncoder` | Converts labels into numerical values. |
+
+### Step 2: Load and prepare Sign Language MNIST
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**Explanation:**
+
+- `pd.read_csv()` reads the CSV files.
+- `train_df` stores the training dataset.
+- `test_df` stores the testing dataset.
+
+The dataset contains grayscale hand gesture images and their corresponding alphabet labels.
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+**Explanation:**
+
+- `drop(columns="label")` removes the label column and keeps only image pixels.
+- `to_numpy()` converts the data into NumPy arrays.
+- `dtype="float32"` converts values into decimal numbers.
+- `/ 255.0` normalizes the pixel values.
+
+**Why divide by 255?**
+
+Original pixel values range from 0 to 255.
+
+After normalization, values range from 0 to 1.
+
+Example:
+
+- 255 / 255 = 1
+- 128 / 255 ≈ 0.50
+- 0 / 255 = 0
+
+**Why normalize?**
+
+It helps the model learn faster and makes training more stable.
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+**Explanation:**
+
+- `LabelEncoder()` creates a label encoder.
+- `fit_transform()` learns the training labels and converts them into numerical values.
+- `transform()` converts testing labels using the same encoding.
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+Converts numerical labels into alphabet characters.
+
+- `chr()` converts an ASCII value into a character.
+- `65` is the ASCII value of capital A.
+
+For example:
+
+- 0 → A
+- 1 → B
+- 2 → C
+
+The dataset contains 24 classes because J and Z are excluded. Their gestures require movement and cannot be represented properly using a single static image.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image shape:
+
+- 28 = height.
+- 28 = width.
+- 1 = grayscale channel.
+
+### Step 3: Reshape the images
+
+```python
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+```
+
+Initially, each image contains 784 pixel values in a single row.
+
+CNN requires images in this format:
+
+`Height × Width × Channels`
+
+Therefore, we reshape each image into `28 × 28 × 1`.
+
+**What does `-1` mean?**
+
+It automatically calculates the number of images based on the available data.
+
+**Why do we reshape?**
+
+CNN requires image data in height, width and channel format to perform convolution operations.
+
+### Step 4: Build the CNN model
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the total number of alphabet classes.
+
+Here, there are 24 classes.
+
+```python
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This creates the CNN architecture.
+
+**Layer-by-layer explanation:**
+
+| Layer | Explanation |
+|---|---|
+| `Input(shape=X_train.shape[1:])` | Defines the input image shape as 28 × 28 × 1. |
+| `Conv2D(32, (3,3), activation="relu")` | Uses 32 filters of size 3 × 3 to extract basic image features. |
+| `MaxPooling2D((2,2))` | Reduces feature map dimensions. |
+| `Conv2D(64, (3,3), activation="relu")` | Uses 64 filters to extract more complex features. |
+| `MaxPooling2D((2,2))` | Further reduces feature map dimensions. |
+| `Flatten()` | Converts feature maps into a 1D array. |
+| `Dense(128, activation="relu")` | Fully connected layer with 128 neurons. |
+| `Dense(num_classes, activation="softmax")` | Output layer that predicts one of the 24 alphabet classes. |
+
+#### Important: How does convolutional feature extraction work?
+
+This is the main concept of this practical.
+
+**1. Convolution Layer**
+
+- Applies filters to the input image.
+- Detects basic features such as edges, lines and shapes.
+- The second convolution layer learns more complex patterns from the extracted features.
+
+**2. Max Pooling Layer**
+
+- Reduces the size of feature maps.
+- Selects the maximum value from a particular region.
+- Retains important information while reducing computation.
+
+**3. Flatten Layer**
+
+- Converts extracted feature maps into a one-dimensional vector.
+- Passes this information to the Dense layer for classification.
+
+**4. Dense Layer**
+
+- Learns patterns from extracted features.
+- Predicts the alphabet class.
+
+**Simple working flow:**
+
+```text
+Input Hand Gesture Image
+          ↓
+   Convolution Layer
+          ↓
+   Max Pooling Layer
+          ↓
+   Convolution Layer
+          ↓
+   Max Pooling Layer
+          ↓
+      Flatten
+          ↓
+     Dense Layer
+          ↓
+    Softmax Output
+          ↓
+   Predicted Alphabet
+```
+
+### Step 5: Compile and train
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Before training, we compile the model.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multiple classes with integer labels. |
+| `metrics=["accuracy"]` | Calculates the percentage of correct predictions. |
+
+**What is Adam?**
+
+Adam is an optimization algorithm that adjusts model weights to improve performance.
+
+**What is sparse categorical crossentropy?**
+
+It is a loss function used for multi-class classification when target labels are represented as integers.
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+This trains the CNN model.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=10` | Trains the model for 10 complete rounds. |
+| `batch_size=128` | Processes 128 images at a time before updating weights. |
+| `verbose=0` | Hides training progress. |
+
+**What is an epoch?**
+
+One complete pass through the entire training dataset.
+
+**What is batch size?**
+
+The number of images processed before updating model weights.
+
+### Step 6: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+Evaluates the trained model using testing data.
+
+- `model.evaluate()` checks model performance.
+- `X_test` contains testing images.
+- `y_test` contains actual testing labels.
+- `verbose=0` hides evaluation progress.
+
+It returns two values:
+
+1. Test loss.
+2. Test accuracy.
+
+`_` stores the test loss, which is not used here.
+
+`test_accuracy` stores the testing accuracy.
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+Displays the testing accuracy as a percentage.
+
+- `* 100` converts decimal accuracy into percentage.
+- `:.2f` displays two digits after the decimal point.
+
+---
+
+## 3. Understanding the Output
+
+Your output:
+
+```text
+Testing accuracy: 90.94%
+```
+
+**Meaning:**
+
+The CNN model correctly classified approximately 90.94% of the test images.
+
+For example, if the model tests 1,000 images, approximately 909 images would be classified correctly.
+
+The remaining images may be classified incorrectly.
+
+**Is 90.94% good?**
+
+Yes. It indicates that the CNN model has learned useful features from hand gesture images and can recognize most of the test images correctly.
+
+---
+
+# 4. Important Viva Questions and Answers
+
+### CNN and Feature Extraction
+
+**Q1. What is CNN?**  
+CNN stands for Convolutional Neural Network. It is a deep learning model mainly used for image recognition and classification.
+
+**Q2. What is feature extraction?**  
+Feature extraction means identifying important information from images, such as edges, shapes, patterns and textures.
+
+**Q3. Why is CNN used for feature extraction?**  
+CNN automatically learns important image features using convolutional filters.
+
+**Q4. What is convolution?**  
+Convolution is an operation in which a filter moves over an image to extract important features.
+
+**Q5. What is a convolution filter?**  
+A filter is a small matrix that detects features such as edges, lines and patterns in an image.
+
+**Q6. What is the purpose of the first Conv2D layer?**  
+It extracts basic features such as edges and lines.
+
+**Q7. What is the purpose of the second Conv2D layer?**  
+It extracts more complex features by learning from the features detected by the previous layer.
+
+**Q8. What is Max Pooling?**  
+Max Pooling selects the maximum value from a particular region and reduces the feature map size.
+
+**Q9. Why do we use Max Pooling?**  
+To reduce dimensions, computation and unnecessary information while retaining important features.
+
+**Q10. What is the difference between convolution and pooling?**
+
+- Convolution extracts features from images.
+- Pooling reduces the dimensions of extracted feature maps.
+
+**Q11. What is Flatten?**  
+Flatten converts 2D feature maps into a one-dimensional array.
+
+**Q12. What is the role of the Dense layer?**  
+It uses extracted features to classify the image into the correct alphabet.
+
+**Q13. What is ReLU?**  
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+**Q14. What is Softmax?**  
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Dataset and Preprocessing
+
+**Q15. Which dataset is used in this practical?**  
+Sign Language MNIST dataset.
+
+**Q16. What is the image size?**  
+28 × 28 pixels.
+
+**Q17. Is the dataset grayscale or RGB?**  
+It is grayscale.
+
+**Q18. How many channels are present?**  
+One channel.
+
+**Q19. How many classes are present?**  
+24 classes.
+
+**Q20. Why are J and Z excluded?**  
+Because their gestures require movement and cannot be represented properly using a single static image.
+
+**Q21. Why do we normalize pixel values?**  
+To convert pixel values from 0–255 to 0–1, helping the model train more efficiently.
+
+**Q22. Why do we reshape images?**  
+CNN requires images in height, width and channel format.
+
+### Model Training and Evaluation
+
+**Q23. What is an epoch?**  
+One complete pass through the training dataset.
+
+**Q24. What is batch size?**  
+The number of images processed before updating model weights.
+
+**Q25. Which optimizer is used?**  
+Adam optimizer.
+
+**Q26. Which loss function is used?**  
+Sparse categorical crossentropy.
+
+**Q27. What is accuracy?**  
+Accuracy is the percentage of correct predictions made by the model.
+
+**Q28. What is testing accuracy?**  
+It measures how correctly the trained model predicts unseen testing images.
+
+**Q29. What is overfitting?**  
+Overfitting occurs when a model performs very well on training data but poorly on unseen data.
+
+**Q30. What is the purpose of `model.evaluate()`?**  
+It evaluates the trained model on testing data and returns loss and accuracy.
+
+**Q31. What is the output accuracy in this practical?**  
+90.94%.
+
+**Q32. What does 90.94% accuracy mean?**  
+It means the model correctly classifies approximately 90.94% of the testing images.
+
+---
+
+## 5. Difference Between Chit 9 and Chit 10
+
+Both practicals use the same CNN architecture and Sign Language MNIST dataset, but their objectives are different.
+
+| Chit 9 | Chit 10 |
+|---|---|
+| Predicts alphabet labels for test images. | Extracts image features and performs classification. |
+| Displays five test images. | Displays testing accuracy. |
+| Uses `model.predict()`. | Uses `model.evaluate()`. |
+| Uses `np.argmax()` to select predicted classes. | Does not manually calculate predicted labels. |
+| Focuses on actual vs predicted alphabets. | Focuses on feature extraction and classification accuracy. |
+
+---
+
+## 6. Quick Revision for External Viva
+
+If the examiner asks, **"Explain this practical,"** you can answer:
+
+> In this practical, I implemented a CNN model for Sign Language alphabet classification using the Sign Language MNIST dataset. First, I loaded the training and testing datasets and normalized pixel values between 0 and 1. Then, I reshaped the images into 28 × 28 × 1 format. I created a CNN model using two convolution layers and two max-pooling layers to extract important features from hand gesture images. After feature extraction, I used Flatten and Dense layers for classification. I compiled the model using Adam optimizer and sparse categorical crossentropy loss function. Finally, I trained the model for 10 epochs and evaluated it on testing data. The testing accuracy obtained was 90.94%.
+
+### Remember These Important Points
+
+1. **Dataset:** Sign Language MNIST.
+2. **Image size:** 28 × 28.
+3. **Image type:** Grayscale.
+4. **Classes:** 24.
+5. **Normalization:** Divide by 255.
+6. **Feature extraction:** Conv2D.
+7. **Dimension reduction:** MaxPooling2D.
+8. **Classification:** Dense + Softmax.
+9. **Optimizer:** Adam.
+10. **Testing accuracy:** 90.94%.
+
+**Code verdict:** Your code is correct for the given practical. It performs convolutional feature extraction, classifies the hand gesture images and displays the testing accuracy.

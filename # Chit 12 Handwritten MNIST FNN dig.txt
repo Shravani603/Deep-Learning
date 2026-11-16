@@ -316,3 +316,548 @@ The model classified **97.29% of the test images correctly**.
 
 20. **Does 97.29% accuracy mean every digit is classified correctly?**  
     No. It means that percentage of the test set was correct; some images may still be misclassified.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 12: Handwritten MNIST FNN – Digit Classification
+
+## 1. Aim of the Practical
+
+To develop a **Feedforward Neural Network (FNN)** using TensorFlow/Keras to classify handwritten digits from 0 to 9.
+
+The model performs the following tasks:
+1. Loads the Handwritten MNIST dataset.
+2. Normalizes pixel values between 0 and 1.
+3. Flattens images into one-dimensional arrays.
+4. Builds and trains an FNN using Dense layers.
+5. Evaluates the model and displays testing accuracy.
+
+---
+
+## 2. Explanation of Code Step-by-Step
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical operations and array handling. |
+| `import tensorflow as tf` | Imports TensorFlow for deep learning operations. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the input shape of the neural network. |
+| `Dense` | Creates a fully connected neural network layer. |
+
+**What is TensorFlow?**
+
+TensorFlow is an open-source library used to build, train and evaluate machine learning and deep learning models.
+
+**What is Keras?**
+
+Keras is a high-level deep learning API that makes it easier to build and train neural networks.
+
+### Step 2: Load and Prepare Handwritten MNIST
+
+```python
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+```
+
+**What is MNIST?**
+
+MNIST stands for Modified National Institute of Standards and Technology.
+
+It is a dataset containing images of handwritten digits from **0 to 9**.
+
+It contains:
+
+- 60,000 training images.
+- 10,000 testing images.
+- 10 different digit classes.
+- Each image has dimensions of 28 × 28 pixels.
+
+**Explanation:**
+
+- `mnist`: Loads the handwritten digit dataset.
+- `load_data()`: Loads the dataset into training and testing sets.
+- `X_train`: Contains 60,000 training images.
+- `y_train`: Contains actual digit labels for training images.
+- `X_test`: Contains 10,000 testing images.
+- `y_test`: Contains actual digit labels for testing images.
+
+#### Normalize the Images
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `astype("float32")`: Converts pixel values into floating-point numbers.
+- `/255.0`: Divides each pixel value by 255.
+
+Originally, pixel values range from **0 to 255**.
+
+After normalization, pixel values range from **0 to 1**.
+
+**Why is normalization required?**
+
+- Helps the model learn faster.
+- Improves training stability.
+- Prevents large pixel values from affecting the learning process unnecessarily.
+
+#### Define Class Names
+
+```python
+class_names = [str(i) for i in range(10)]
+```
+
+This creates a list containing digit names from 0 to 9.
+
+Output:
+
+```text
+['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+```
+
+- `range(10)`: Generates numbers from 0 to 9.
+- `str(i)`: Converts each number into a string.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image dimensions:
+
+- 28 = Image height.
+- 28 = Image width.
+- 1 = One grayscale channel.
+
+### Step 3: Flatten the Images
+
+```python
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+```
+
+**What is Flattening?**
+
+Flattening converts a two-dimensional image into a one-dimensional array.
+
+Each image contains:
+
+28 × 28 = 784 pixels.
+
+Therefore, each image is converted into an array of 784 values.
+
+| Before Flattening | After Flattening |
+|---|---|
+| 28 × 28 | 784 |
+| 2D image | 1D array |
+
+**Why is flattening required?**
+
+An FNN with Dense layers expects one-dimensional input. Therefore, images are flattened before passing them to the network.
+
+### Step 4: Build the Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+**1. Number of Classes**
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the number of digit classes.
+
+Here, the number of classes is **10 (0 to 9)**.
+
+**2. Sequential Model**
+
+```python
+model = Sequential([
+```
+
+Creates a neural network in which layers are connected one after another.
+
+**3. Input Layer**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size.
+- `X_train.shape[1]` represents 784 input features.
+- Each image contains 784 pixel values.
+
+**4. First Hidden Layer**
+
+```python
+Dense(256, activation="relu")
+```
+
+- Contains 256 neurons.
+- Uses ReLU activation.
+- Learns basic patterns and features from the handwritten digits.
+
+**5. Second Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns more complex patterns from the input.
+
+**6. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one digit from 0 to 9.
+- Softmax produces probability scores for all 10 digits.
+- The digit with the highest probability is selected as the prediction.
+
+### FNN Architecture Diagram
+
+```text
+       Handwritten Digit
+          28 × 28
+             |
+             v
+       Flatten Layer
+         784 Pixels
+             |
+             v
+      Hidden Layer 1
+        256 Neurons
+           ReLU
+             |
+             v
+      Hidden Layer 2
+        128 Neurons
+           ReLU
+             |
+             v
+       Output Layer
+        10 Neurons
+          Softmax
+             |
+             v
+      Predicted Digit
+          0 to 9
+```
+
+### Step 5: Compile the Model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Calculates prediction error for multi-class classification with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correctly classified images. |
+
+**What is an Optimizer?**
+
+An optimizer updates the weights and biases of a neural network to minimize the loss.
+
+**What is Loss?**
+
+Loss measures the difference between actual and predicted outputs.
+
+**What is Accuracy?**
+
+Accuracy measures how many predictions are correct compared to the total number of predictions.
+
+### Step 6: Train the Model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This step trains the FNN using training images and their actual digit labels.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual digit labels. |
+| `epochs=15` | Model processes the complete training dataset 15 times. |
+| `batch_size=128` | Processes 128 images before updating weights. |
+| `verbose=0` | Hides training progress output. |
+
+**What is an Epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**What is Batch Size?**
+
+The number of training samples processed together before updating the model weights.
+
+### Step 7: Evaluate on Test Data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This evaluates the trained model using testing data.
+
+- `model.evaluate()`: Evaluates the performance of the trained model.
+- `X_test`: Testing images.
+- `y_test`: Actual testing labels.
+- `verbose=0`: Hides evaluation progress.
+- `_`: Stores and ignores the loss value.
+- `test_accuracy`: Stores the testing accuracy.
+
+**Why is `_` used?**
+
+`model.evaluate()` returns two values in this program:
+
+1. Test loss.
+2. Test accuracy.
+
+We only need testing accuracy, so `_` is used to ignore the loss value.
+
+#### Display Testing Accuracy
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `test_accuracy * 100`: Converts accuracy into percentage.
+- `:.2f`: Displays the result up to two decimal places.
+- `print()`: Displays the final result.
+
+---
+
+## 3. Understanding the Output
+
+Your output:
+
+```text
+Testing accuracy: 97.29%
+```
+
+**Meaning:**
+
+The trained FNN correctly classified approximately **97.29% of the 10,000 testing images**.
+
+In simple words, the model can recognize handwritten digits with high accuracy.
+
+For example:
+- If an image contains handwritten digit 5, the model should predict 5.
+- If an image contains handwritten digit 8, the model should predict 8.
+
+The model is evaluated using testing images that were not used during training.
+
+---
+
+# 4. Important External Viva Questions and Answers
+
+### Q1. What is MNIST?
+MNIST is a dataset of handwritten digit images used for training and testing image classification models.
+
+### Q2. What is the full form of MNIST?
+Modified National Institute of Standards and Technology.
+
+### Q3. How many images are present in MNIST?
+- 60,000 training images.
+- 10,000 testing images.
+
+### Q4. How many classes are present in MNIST?
+10 classes, representing digits from 0 to 9.
+
+### Q5. What is the size of each image?
+28 × 28 pixels.
+
+### Q6. What is an FNN?
+FNN stands for Feedforward Neural Network. Information moves from the input layer through hidden layers to the output layer in one direction.
+
+### Q7. Why is it called a Feedforward Neural Network?
+Because information flows only in the forward direction without feedback loops.
+
+### Q8. What is the purpose of flattening?
+Flattening converts a 28 × 28 image into a one-dimensional array containing 784 values.
+
+### Q9. Why do we normalize images?
+To convert pixel values from 0–255 into 0–1, helping the model train efficiently.
+
+### Q10. How many hidden layers are used in this model?
+Two hidden layers.
+
+### Q11. How many neurons are present in the hidden layers?
+- First hidden layer: 256 neurons.
+- Second hidden layer: 128 neurons.
+
+### Q12. How many neurons are present in the output layer?
+10 neurons because there are 10 digit classes.
+
+### Q13. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+### Q14. What is Softmax?
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Q15. Why is Softmax used in the output layer?
+Because the model has to classify an image into one of 10 digit categories.
+
+### Q16. What is the Adam optimizer?
+Adam is an optimization algorithm that updates neural network weights to reduce prediction errors.
+
+### Q17. What is an Epoch?
+One complete pass through the entire training dataset.
+
+### Q18. What is Batch Size?
+The number of training images processed together before updating the model weights.
+
+### Q19. What is the purpose of `model.fit()`?
+It trains the neural network using training images and their actual labels.
+
+### Q20. What is the purpose of `model.evaluate()`?
+It evaluates the trained model using testing data and returns the loss and evaluation metrics.
+
+### Q21. What is the purpose of `model.predict()`?
+It predicts the output for new input data.
+
+### Q22. What is sparse categorical crossentropy?
+It is a loss function used for multi-class classification when actual class labels are represented as integers.
+
+### Q23. What is the difference between training and testing data?
+- Training data teaches the model.
+- Testing data evaluates how well the trained model performs on unseen images.
+
+### Q24. What is the difference between MNIST and Fashion-MNIST?
+
+| MNIST | Fashion-MNIST |
+|---|---|
+| Contains handwritten digits. | Contains clothing images. |
+| Has 10 digit classes (0–9). | Has 10 clothing classes. |
+| Used for digit classification. | Used for clothing classification. |
+| Example: Digit 5. | Example: Sneaker. |
+
+### Q25. What is the difference between FNN and CNN?
+- FNN uses Dense layers and flattened image input.
+- CNN uses convolutional layers to extract image features automatically.
+- CNN is generally more suitable for image classification.
+
+### Q26. What does 97.29% accuracy mean?
+It means the model correctly classified approximately 97.29% of the testing images.
+
+### Q27. What is overfitting?
+Overfitting occurs when a model performs very well on training data but performs poorly on unseen testing data.
+
+### Q28. Why do we use `float32`?
+It represents numbers using 32-bit floating-point precision and is commonly used for efficient deep learning computations.
+
+---
+
+## 5. Quick Revision Before Viva
+
+| Topic | Answer |
+|---|---|
+| Practical | Handwritten digit classification |
+| Model | Feedforward Neural Network |
+| Dataset | MNIST |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 |
+| Number of classes | 10 |
+| Digits | 0 to 9 |
+| Original pixel range | 0–255 |
+| Normalized range | 0–1 |
+| Input features | 784 |
+| Hidden layers | 2 |
+| First hidden layer | 256 neurons |
+| Second hidden layer | 128 neurons |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Evaluation function | `model.evaluate()` |
+| Testing accuracy | 97.29% |
+
+---
+
+## 6. Explain This Practical to the External Examiner
+
+Memorize this short explanation:
+
+"This practical implements a Feedforward Neural Network to classify handwritten digits using the MNIST dataset. First, we load the dataset, which contains 60,000 training images and 10,000 testing images. Each image is 28 × 28 pixels. We normalize the pixel values between 0 and 1 and flatten each image into 784 values. Then we build an FNN using two hidden Dense layers containing 256 and 128 neurons with ReLU activation. The output layer contains 10 neurons with Softmax activation because we have 10 digit classes from 0 to 9. We compile the model using the Adam optimizer and sparse categorical crossentropy loss. Then we train it for 15 epochs with a batch size of 128. Finally, we evaluate the model on testing data and obtain a testing accuracy of 97.29%."
+
+### Final Verdict
+
+**Your Chit 12 code is correct.** It satisfies all the requirements:
+- Loads the Handwritten MNIST dataset.
+- Normalizes pixel values.
+- Flattens images into 784 features.
+- Builds and trains an FNN using Dense layers.
+- Evaluates the model and displays testing accuracy.
+
+**Testing accuracy: 97.29% — good classification performance.**

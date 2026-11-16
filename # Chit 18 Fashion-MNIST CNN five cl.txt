@@ -417,3 +417,913 @@ All five displayed predictions match their actual labels. These are only five ex
 
 20. **Why could a clothing item be misclassified?**  
     Some categories, such as shirts and T-shirts, can look similar in small grayscale images.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 18: Fashion-MNIST CNN – Five Clothing Predictions
+
+## 1. Aim
+
+To implement a **Convolutional Neural Network (CNN)** using TensorFlow/Keras to classify clothing images into different categories using the Fashion-MNIST dataset and display the actual and predicted labels for five test images.
+
+The model uses:
+- Conv2D for feature extraction.
+- MaxPooling2D for reducing feature dimensions.
+- Flatten to convert feature maps into one-dimensional data.
+- Dense layers for classification.
+- Matplotlib to display five test images with actual and predicted labels.
+
+---
+
+## 2. Step-by-Step Code Explanation
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+import matplotlib.pyplot as plt
+```
+
+| Library / Function | Explanation |
+|---|---|
+| `numpy` | Performs numerical operations and array handling. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the shape of input images. |
+| `Dense` | Creates a fully connected neural network layer. |
+| `Conv2D` | Extracts image features using convolution. |
+| `MaxPooling2D` | Reduces the spatial dimensions of feature maps. |
+| `Flatten` | Converts multidimensional feature maps into a one-dimensional array. |
+| `matplotlib.pyplot` | Displays images and their actual and predicted labels. |
+
+---
+
+### Step 2: Load and Prepare Fashion-MNIST
+
+```python
+from tensorflow.keras.datasets import fashion_mnist
+
+(X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
+```
+
+- `fashion_mnist` is a built-in clothing image dataset available in Keras.
+- `load_data()` loads the dataset and divides it into training and testing data.
+
+**Fashion-MNIST dataset contains:**
+
+| Property | Description |
+|---|---|
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 pixels |
+| Image type | Grayscale |
+| Number of classes | 10 |
+
+### The 10 Clothing Categories
+
+| Label | Class name |
+|---:|---|
+| 0 | T-shirt/top |
+| 1 | Trouser |
+| 2 | Pullover |
+| 3 | Dress |
+| 4 | Coat |
+| 5 | Sandal |
+| 6 | Shirt |
+| 7 | Sneaker |
+| 8 | Bag |
+| 9 | Ankle boot |
+
+**Understanding the variables:**
+
+- `X_train`: Training images.
+- `y_train`: Actual labels of training images.
+- `X_test`: Testing images.
+- `y_test`: Actual labels of testing images.
+
+For example, if an image contains a Sneaker, its actual label is `7`.
+
+**Normalize the images:**
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `astype("float32")` converts pixel values into floating-point numbers.
+- Dividing by 255 converts pixel values from 0–255 into 0–1.
+
+**Why do we normalize?**
+
+Normalization helps the model learn efficiently and improves training stability.
+
+**Define class names:**
+
+```python
+class_names = ["T-shirt/top", "Trouser", "Pullover", "Dress",
+               "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
+```
+
+- Stores the names of all 10 clothing categories.
+- These names are used to display actual and predicted labels instead of numeric values.
+
+For example:
+- Label `0` → T-shirt/top.
+- Label `7` → Sneaker.
+- Label `9` → Ankle boot.
+
+**Define image shape:**
+
+```python
+image_shape = (28, 28, 1)
+```
+
+- 28 = Image height.
+- 28 = Image width.
+- 1 = Grayscale channel.
+
+---
+
+### Step 3: Reshape the Images
+
+```python
+X_train = X_train[..., np.newaxis]
+X_test = X_test[..., np.newaxis]
+```
+
+This step adds a channel dimension to the images.
+
+**What does `np.newaxis` do?**
+
+- Adds a new dimension to an existing NumPy array.
+- Here, it adds the channel dimension at the end.
+
+Before reshaping:
+
+```text
+Training: (60000, 28, 28)
+Testing:  (10000, 28, 28)
+```
+
+After reshaping:
+
+```text
+Training: (60000, 28, 28, 1)
+Testing:  (10000, 28, 28, 1)
+```
+
+**What does `...` mean?**
+
+It represents all the existing dimensions.
+
+**Why is this required?**
+
+The `Conv2D` layer expects input in this format:
+
+```text
+(Number of images, Height, Width, Channels)
+```
+
+Since Fashion-MNIST images are grayscale, they have one channel.
+
+---
+
+### Step 4: Build the CNN Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This is the most important part of the practical.
+
+Let's understand each layer.
+
+**1. Number of classes**
+
+```python
+num_classes = len(class_names)
+```
+
+- Calculates the number of clothing categories.
+- Here, `num_classes = 10`.
+
+**2. Sequential model**
+
+```python
+model = Sequential([...])
+```
+
+Creates a CNN in which layers are arranged one after another.
+
+**3. Input layer**
+
+```python
+Input(shape=X_train.shape[1:])
+```
+
+- Defines the shape of each input image.
+- `X_train.shape[1:]` gives `(28, 28, 1)`.
+- The model accepts 28 × 28 grayscale images.
+
+**4. First Convolutional Layer**
+
+```python
+Conv2D(32, (3, 3), activation="relu")
+```
+
+- `Conv2D` performs convolution.
+- `32` represents the number of filters.
+- `(3,3)` represents the size of each filter.
+- ReLU is the activation function.
+
+**What is convolution?**
+
+Convolution is an operation in which small filters slide over an image to identify important features.
+
+For clothing images, it can help identify:
+- Edges.
+- Curves.
+- Shapes.
+- Clothing outlines.
+- Patterns and textures.
+
+**What is a filter?**
+
+A filter is a small matrix that moves over an image to extract specific features.
+
+Here, the first convolutional layer uses 32 filters of size 3 × 3.
+
+**5. First Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Performs max-pooling.
+- Uses a 2 × 2 pooling window.
+- Selects the maximum value from each 2 × 2 region.
+- Reduces the spatial dimensions of feature maps.
+
+**Why do we use Max-Pooling?**
+
+1. Reduces feature map dimensions.
+2. Reduces computational requirements.
+3. Retains important features.
+4. Makes the model less sensitive to small changes in image position.
+
+**6. Second Convolutional Layer**
+
+```python
+Conv2D(64, (3, 3), activation="relu")
+```
+
+- Uses 64 filters.
+- Each filter has a size of 3 × 3.
+- Extracts more complex features from the previous feature maps.
+- Uses ReLU activation.
+
+**7. Second Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Uses a 2 × 2 pooling window.
+- Reduces feature map dimensions further.
+- Retains the maximum values from each region.
+
+**8. Flatten Layer**
+
+```python
+Flatten()
+```
+
+- Converts multidimensional feature maps into a one-dimensional array.
+- Makes the data suitable for Dense layers.
+
+**9. Dense Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Uses ReLU activation.
+- Learns patterns from the features extracted by convolutional layers.
+
+**10. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one clothing category.
+- Softmax produces probabilities for all 10 classes.
+- The category with the highest probability is selected as the prediction.
+
+### CNN Architecture Diagram
+
+```text
+          Input Image
+         28 × 28 × 1
+               |
+               ↓
+      Convolutional Layer 1
+        32 Filters (3 × 3)
+          ReLU Activation
+               |
+               ↓
+        Max-Pooling Layer
+            (2 × 2)
+               |
+               ↓
+      Convolutional Layer 2
+        64 Filters (3 × 3)
+          ReLU Activation
+               |
+               ↓
+        Max-Pooling Layer
+            (2 × 2)
+               |
+               ↓
+          Flatten Layer
+               |
+               ↓
+           Dense Layer
+           128 Neurons
+          ReLU Activation
+               |
+               ↓
+          Output Layer
+           10 Neurons
+        Softmax Activation
+               |
+               ↓
+     Predicted Clothing Category
+```
+
+### Understanding Dimensions After Each Layer
+
+| Layer | Output shape (excluding batch size) |
+|---|---|
+| Input | 28 × 28 × 1 |
+| Conv2D (32 filters) | 26 × 26 × 32 |
+| MaxPooling2D | 13 × 13 × 32 |
+| Conv2D (64 filters) | 11 × 11 × 64 |
+| MaxPooling2D | 5 × 5 × 64 |
+| Flatten | 1600 |
+| Dense | 128 |
+| Output | 10 |
+
+**How are these dimensions calculated?**
+
+- First convolution: 28 − 3 + 1 = 26.
+- First pooling: 26 ÷ 2 = 13.
+- Second convolution: 13 − 3 + 1 = 11.
+- Second pooling: 11 × 11 becomes 5 × 5.
+- Flatten: 5 × 5 × 64 = 1600.
+
+Note: The convolution layers use valid padding by default, meaning no extra padding is added around the image.
+
+---
+
+### Step 5: Compile and Train
+
+**Compile the model:**
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted classes. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**Why sparse categorical crossentropy?**
+
+Because this is a multiclass classification problem with 10 categories, and labels are provided as integer values from 0 to 9.
+
+**Train the model:**
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit()` trains the CNN.
+- `X_train`: Training images.
+- `y_train`: Actual training labels.
+- `epochs=10`: The model passes through the complete training dataset 10 times.
+- `batch_size=128`: Processes 128 images in one batch before updating weights.
+- `verbose=0`: Hides the training progress.
+
+---
+
+### Step 6: Predict Test Images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This step predicts the clothing categories for all 10,000 test images.
+
+Let's understand it:
+
+**1. `model.predict(X_test, verbose=0)`**
+
+- Uses the trained CNN to predict the classes of test images.
+- Produces 10 probability values for each image, one for each clothing category.
+
+Example:
+
+Suppose the model predicts these probabilities for one image:
+
+| Clothing category | Probability |
+|---|---:|
+| T-shirt/top | 0.02 |
+| Trouser | 0.01 |
+| Pullover | 0.05 |
+| Dress | 0.02 |
+| Coat | 0.10 |
+| Sandal | 0.01 |
+| Shirt | 0.04 |
+| Sneaker | 0.70 |
+| Bag | 0.03 |
+| Ankle boot | 0.02 |
+
+Sneaker has the highest probability.
+
+**2. `np.argmax()`**
+
+- Finds the index of the highest probability.
+- In this example, it returns `7`.
+- Therefore, the predicted category is Sneaker.
+
+**3. `axis=1`**
+
+Finds the highest probability across the 10 classes for each image.
+
+**4. `y_pred`**
+
+Stores the predicted labels for all test images.
+
+For example:
+
+```text
+[7, 2, 1, 4, 6, ...]
+```
+
+Each number represents a predicted clothing category.
+
+---
+
+### Step 7: Display Five Test Images
+
+This is the main output-related step in this practical.
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+- Creates a figure for displaying images.
+- `figsize=(14,4)` sets the figure width to 14 inches and height to 4 inches.
+
+**Run a loop for five images:**
+
+```python
+for i in range(5):
+```
+
+- Repeats the instructions five times.
+- Displays the first five test images.
+- `i` takes values from 0 to 4.
+
+**Get the image:**
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+- Selects the test image at index `i`.
+- Reshapes it into `(28,28,1)`.
+- `image_shape` was defined earlier.
+
+**Create subplot:**
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+Creates a layout with:
+- 1 row.
+- 5 columns.
+- `i + 1` specifies the current image position.
+
+For example:
+- First image → position 1.
+- Second image → position 2.
+- Fifth image → position 5.
+
+**Check whether the image is grayscale:**
+
+```python
+if image_shape[-1] == 1:
+```
+
+- `image_shape[-1]` accesses the last value of the image shape.
+- The last value is 1.
+- Therefore, the condition is true because the image has one grayscale channel.
+
+**Display grayscale image:**
+
+```python
+plt.imshow(image.squeeze(), cmap="gray")
+```
+
+- `image.squeeze()` removes the extra channel dimension.
+- Converts the image shape from `(28,28,1)` to `(28,28)`.
+- `plt.imshow()` displays the image.
+- `cmap="gray"` displays it using grayscale shades.
+
+**Otherwise display a color image:**
+
+```python
+else:
+    plt.imshow(image)
+```
+
+This part is used if the image has more than one channel, such as an RGB image.
+
+**Display actual and predicted labels:**
+
+```python
+plt.title(
+    f"Actual: {class_names[int(y_test[i])]}\nPredicted: {class_names[int(y_pred[i])]}"
+)
+```
+
+This line displays two labels above each image.
+
+- `y_test[i]` gives the actual class label.
+- `y_pred[i]` gives the predicted class label.
+- `int()` converts the label into an integer.
+- `class_names[]` converts the numeric label into its clothing category name.
+- `\n` moves the predicted label to the next line.
+
+Example:
+
+```text
+Actual: Sneaker
+Predicted: Sneaker
+```
+
+If the model makes a mistake, it might display:
+
+```text
+Actual: Shirt
+Predicted: T-shirt/top
+```
+
+**Hide axis values:**
+
+```python
+plt.axis("off")
+```
+
+Hides the X-axis and Y-axis numbers to make the image display cleaner.
+
+**Adjust spacing:**
+
+```python
+plt.tight_layout()
+```
+
+Automatically adjusts spacing between images and labels.
+
+**Display the output:**
+
+```python
+plt.show()
+```
+
+Displays the final figure containing five test images with their actual and predicted labels.
+
+---
+
+## 3. Understanding the Output
+
+Your code displays **five test images** in a single row.
+
+Each image shows:
+
+1. The actual clothing category.
+2. The predicted clothing category.
+
+Example of an illustrative output:
+
+
+
+### How to interpret the predictions?
+
+**Case 1: Correct prediction**
+
+```text
+Actual: Sneaker
+Predicted: Sneaker
+```
+
+The model correctly identified the image.
+
+**Case 2: Incorrect prediction**
+
+```text
+Actual: Shirt
+Predicted: T-shirt/top
+```
+
+The model incorrectly classified the Shirt as a T-shirt/top.
+
+### Important observation
+
+- If actual and predicted labels are the same, the prediction is correct.
+- If actual and predicted labels are different, the prediction is incorrect.
+- The practical displays only the first five test images.
+- The model predicts all 10,000 test images, but only five are displayed.
+
+**Important:** This code does not calculate or print testing accuracy. It demonstrates the CNN's predictions visually.
+
+---
+
+## 4. Important Viva Questions and Answers
+
+### Q1. What is Fashion-MNIST?
+Fashion-MNIST is a dataset containing grayscale images of clothing items used for image classification.
+
+### Q2. How many images are present in Fashion-MNIST?
+It contains 70,000 images:
+- 60,000 training images.
+- 10,000 testing images.
+
+### Q3. How many classes are present?
+There are 10 clothing categories.
+
+### Q4. Name the 10 categories.
+T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag and Ankle boot.
+
+### Q5. What is CNN?
+CNN stands for Convolutional Neural Network. It is a deep learning model mainly used for image processing and image classification.
+
+### Q6. Why do we use CNN for clothing classification?
+CNN automatically extracts important image features such as edges, shapes and patterns, making it suitable for image classification.
+
+### Q7. What is convolution?
+Convolution is an operation in which filters slide over an image to extract important features.
+
+### Q8. What is a filter in CNN?
+A filter is a small matrix that moves over an image to detect features such as edges, curves and patterns.
+
+### Q9. What is the filter size used in this practical?
+The filter size is 3 × 3 in both convolutional layers.
+
+### Q10. How many filters are used in the first convolutional layer?
+32 filters.
+
+### Q11. How many filters are used in the second convolutional layer?
+64 filters.
+
+### Q12. What is Max-Pooling?
+Max-pooling is a downsampling operation that selects the maximum value from a small region of a feature map.
+
+### Q13. What is the pooling size used?
+2 × 2.
+
+### Q14. Why do we use Max-Pooling?
+It reduces feature map dimensions, reduces computation and retains important features.
+
+### Q15. What is a feature map?
+A feature map is the output produced after applying a filter to an image or previous feature maps.
+
+### Q16. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+Formula:
+
+`ReLU(x) = max(0, x)`
+
+### Q17. Why do we use Flatten?
+Flatten converts multidimensional feature maps into a one-dimensional array before passing them to Dense layers.
+
+### Q18. What is the purpose of the Dense layer?
+Dense layers use the extracted features to perform final classification.
+
+### Q19. Why does the output layer contain 10 neurons?
+Because Fashion-MNIST contains 10 clothing categories.
+
+### Q20. What is Softmax?
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Q21. Why do we use `np.newaxis`?
+It adds a channel dimension to image data so that it matches the input format expected by Conv2D.
+
+### Q22. Why is the channel value 1?
+Because Fashion-MNIST images are grayscale and contain only one channel.
+
+### Q23. What is `np.argmax()`?
+It returns the index of the highest value in an array. Here, it identifies the predicted clothing category.
+
+### Q24. What is `axis=1`?
+It tells NumPy to find the highest probability across the class dimension for each image.
+
+### Q25. What is the purpose of `model.predict()`?
+It uses the trained model to generate predictions for new or testing images.
+
+### Q26. What is the difference between actual and predicted labels?
+- Actual label is the correct category provided in the dataset.
+- Predicted label is the category identified by the trained model.
+
+### Q27. Why do we use Matplotlib?
+Matplotlib is used to display the five test images along with their actual and predicted labels.
+
+### Q28. What is `plt.subplot(1,5,i+1)`?
+It creates a layout of one row and five columns and selects the position for the current image.
+
+### Q29. What does `image.squeeze()` do?
+It removes dimensions of size 1. Here, it converts `(28,28,1)` into `(28,28)` for grayscale display.
+
+### Q30. What is the difference between CNN and FNN?
+- FNN uses flattened images and fully connected layers.
+- CNN uses convolution and pooling layers to extract spatial features.
+- CNN is generally more suitable for image classification.
+
+### Q31. What is an epoch?
+One complete pass through the entire training dataset is called an epoch.
+
+### Q32. What is batch size?
+The number of training samples processed before updating model weights is called batch size.
+
+### Q33. Which optimizer is used?
+Adam optimizer.
+
+### Q34. Which loss function is used?
+Sparse categorical crossentropy.
+
+### Q35. Does this practical display testing accuracy?
+No. It predicts the test images and displays five actual and predicted labels. It does not calculate or print testing accuracy.
+
+---
+
+## 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Dataset | Fashion-MNIST |
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 |
+| Image type | Grayscale |
+| Number of classes | 10 |
+| Input shape | 28 × 28 × 1 |
+| First Conv2D filters | 32 |
+| Second Conv2D filters | 64 |
+| Filter size | 3 × 3 |
+| Pooling size | 2 × 2 |
+| Pooling operation | Max-Pooling |
+| Dense hidden layer | 128 neurons |
+| Output neurons | 10 |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 10 |
+| Batch size | 128 |
+| Prediction function | `model.predict()` |
+| Highest probability | `np.argmax()` |
+| Number of displayed images | 5 |
+| Image display library | Matplotlib |
+
+---
+
+## 6. Short Explanation to Tell the External Examiner
+
+"I have implemented a Convolutional Neural Network using the Fashion-MNIST dataset to classify clothing images into 10 categories.
+
+First, I loaded the dataset, which contains 60,000 training images and 10,000 testing images. Each image is 28 × 28 pixels. I normalized the pixel values between 0 and 1 and added a channel dimension using `np.newaxis`.
+
+Then, I created a CNN with two convolutional layers containing 32 and 64 filters of size 3 × 3. I used ReLU activation and Max-Pooling layers of size 2 × 2 to extract important features and reduce dimensions.
+
+After that, I used Flatten to convert the feature maps into a one-dimensional array, followed by a Dense layer with 128 neurons and an output layer with 10 neurons using Softmax.
+
+I compiled the model using the Adam optimizer and sparse categorical crossentropy loss function and trained it for 10 epochs with a batch size of 128.
+
+Finally, I predicted the labels of test images using `model.predict()` and `np.argmax()`. I displayed five test images using Matplotlib along with their actual and predicted clothing categories."
+
+---
+
+## 7. Final Verdict
+
+**Your code is correct and matches Chit 18.**
+
+- Fashion-MNIST dataset is loaded correctly.
+- Normalization is correct.
+- Channel dimension is added correctly using `np.newaxis`.
+- Two convolutional layers are implemented correctly.
+- Max-pooling operations are correct.
+- Flatten and Dense layers are correct.
+- Model compilation and training are correct.
+- Predictions are generated correctly.
+- Five images are displayed with actual and predicted labels.
+
+### Important difference between Chit 17 and Chit 18
+
+| Chit 17 | Chit 18 |
+|---|---|
+| Handwritten MNIST dataset | Fashion-MNIST dataset |
+| Classifies digits 0–9 | Classifies 10 clothing categories |
+| Displays testing accuracy | Displays five test predictions |
+| Uses `model.evaluate()` | Uses `model.predict()` |
+| Does not display sample images | Displays five images with actual and predicted labels |
+
+**Most important viva topics:** CNN, convolution, filters, Max-Pooling, Flatten, `np.newaxis`, `np.argmax()`, actual vs predicted labels, and the difference between Chit 17 and Chit 18.

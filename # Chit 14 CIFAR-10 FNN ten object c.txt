@@ -441,3 +441,887 @@ The screenshot does not show the printed test accuracy, so its exact percentage 
 
 20. **Does the five-image display show the model’s overall accuracy?**  
     No. It shows five examples. The full test accuracy is calculated with `model.evaluate()`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 14: CIFAR-10 FNN – Ten Object Categories
+
+## 1. Aim of the Practical
+
+To develop a **Feedforward Neural Network (FNN)** using TensorFlow/Keras to classify images into 10 different object categories using the CIFAR-10 dataset.
+
+The model performs the following tasks:
+
+1. Loads the CIFAR-10 dataset from a CSV file.
+2. Preprocesses and normalizes image data.
+3. Splits the dataset into training and testing data.
+4. Flattens images into one-dimensional arrays.
+5. Builds and trains an FNN using Dense layers.
+6. Evaluates testing accuracy.
+7. Predicts object categories and displays five test images with actual and predicted labels.
+
+---
+
+# 2. Explanation of Code Step-by-Step
+
+## Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+```
+
+| Code | Explanation |
+|---|---|
+| `numpy` | Used for numerical operations and array handling. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `pandas` | Used to read and process CSV files. |
+| `train_test_split` | Divides the dataset into training and testing data. |
+| `matplotlib.pyplot` | Used to display images. |
+
+**What is Pandas?**
+
+Pandas is a Python library used to read, manipulate and analyze structured data.
+
+**What is Scikit-learn?**
+
+Scikit-learn is a Python library used for machine learning tasks such as data splitting, preprocessing and evaluation.
+
+---
+
+## Step 2: Load and Prepare CIFAR-10
+
+### A. Load the Dataset
+
+```python
+data = pd.read_csv("cifar-10.csv", dtype=np.uint8)
+```
+
+**What is CIFAR-10?**
+
+CIFAR-10 is an image dataset containing 60,000 color images divided into 10 different object categories.
+
+It contains:
+- 60,000 images.
+- 10 different classes.
+- Each image has dimensions of 32 × 32 pixels.
+- Each image has 3 color channels (RGB).
+
+**Explanation:**
+
+- `pd.read_csv()`: Reads the CSV file.
+- `"cifar-10.csv"`: Name of the dataset file.
+- `dtype=np.uint8`: Stores pixel values as unsigned 8-bit integers.
+
+**Why is `uint8` used?**
+
+Because image pixel values range from 0 to 255, and `uint8` can store these values efficiently.
+
+### B. Separate Labels and Images
+
+```python
+y = data["label"].to_numpy(dtype="int64")
+```
+
+- Selects the `label` column from the dataset.
+- Converts it into a NumPy array.
+- Stores actual class labels in `y`.
+- `int64` represents integer values using 64 bits.
+
+```python
+X = data.drop(columns="label").to_numpy(dtype="float32")
+```
+
+- `drop(columns="label")`: Removes the label column.
+- Keeps only image pixel values.
+- `to_numpy()`: Converts the data into a NumPy array.
+- `float32`: Converts pixel values into floating-point numbers.
+
+**Why do we separate X and y?**
+
+- `X` contains input images.
+- `y` contains the actual output labels.
+
+### C. Reshape and Normalize Images
+
+```python
+X = X.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1) / 255.0
+```
+
+This is one of the most important statements in the practical.
+
+It performs three operations:
+
+**1. Reshape**
+
+```python
+X.reshape(-1, 3, 32, 32)
+```
+
+Reshapes image data into:
+
+- 3 = RGB color channels.
+- 32 = Image height.
+- 32 = Image width.
+- `-1` = Automatically calculates the number of images.
+
+**2. Transpose**
+
+```python
+.transpose(0, 2, 3, 1)
+```
+
+Changes the image dimensions from:
+
+`(Number of images, 3, 32, 32)`
+
+to:
+
+`(Number of images, 32, 32, 3)`
+
+This arranges the data into the format:
+
+**Height × Width × Channels**
+
+TensorFlow/Keras commonly uses this image format.
+
+**3. Normalize**
+
+```python
+/ 255.0
+```
+
+Divides every pixel value by 255.
+
+Original pixel values: 0–255.
+
+Normalized pixel values: 0–1.
+
+**Why is normalization required?**
+
+- Helps the model learn faster.
+- Improves training stability.
+- Makes pixel values easier for the neural network to process.
+
+### D. Define Class Names
+
+```python
+class_names = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
+```
+
+This list contains the 10 object categories in CIFAR-10.
+
+| Label | Object Category |
+|---|---|
+| 0 | Airplane |
+| 1 | Automobile |
+| 2 | Bird |
+| 3 | Cat |
+| 4 | Deer |
+| 5 | Dog |
+| 6 | Frog |
+| 7 | Horse |
+| 8 | Ship |
+| 9 | Truck |
+
+For example, if the predicted label is `3`, the predicted object is `Cat`.
+
+### E. Define Image Shape
+
+```python
+image_shape = (32, 32, 3)
+```
+
+Defines the image dimensions:
+
+- 32 = Height.
+- 32 = Width.
+- 3 = RGB color channels.
+
+**What is RGB?**
+
+RGB stands for:
+- R = Red
+- G = Green
+- B = Blue
+
+Each pixel contains three color values.
+
+### F. Split the Dataset
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+```
+
+This statement divides the dataset into training and testing data.
+
+Let's understand each parameter:
+
+| Parameter | Explanation |
+|---|---|
+| `X` | Input images. |
+| `y` | Actual class labels. |
+| `test_size=0.2` | Uses 20% of data for testing. |
+| `stratify=y` | Maintains class proportions in training and testing data. |
+| `random_state=42` | Ensures reproducible splitting. |
+
+**What is train_test_split?**
+
+It is a Scikit-learn function used to divide a dataset into training and testing sets.
+
+**What does `test_size=0.2` mean?**
+
+It means:
+
+- 80% of data is used for training.
+- 20% of data is used for testing.
+
+For 60,000 images:
+
+| Dataset | Number of Images |
+|---|---:|
+| Training | 48,000 |
+| Testing | 12,000 |
+| Total | 60,000 |
+
+**What is Stratify?**
+
+`stratify=y` ensures that all 10 classes maintain approximately the same proportion in both training and testing datasets.
+
+**What is random_state=42?**
+
+It fixes the random splitting process so that the same split can be reproduced when the code is run again.
+
+---
+
+## Step 3: Flatten the Images
+
+```python
+X_train = X_train.reshape(len(X_train), 3072)
+X_test = X_test.reshape(len(X_test), 3072)
+```
+
+**What is Flattening?**
+
+Flattening converts a 3D image into a one-dimensional array.
+
+Each CIFAR-10 image has:
+
+32 × 32 × 3 = **3072 values**.
+
+Therefore, each image is converted into an array containing 3072 values.
+
+| Before Flattening | After Flattening |
+|---|---|
+| 32 × 32 × 3 | 3072 |
+| 3D color image | 1D array |
+
+**Why is flattening required?**
+
+An FNN with Dense layers expects one-dimensional input, so images must be flattened before passing them to the model.
+
+---
+
+## Step 4: Build the Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+### A. Number of Classes
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the number of object categories.
+
+Here, the number of classes is **10**.
+
+### B. Sequential Model
+
+```python
+model = Sequential([
+```
+
+Creates a neural network in which layers are arranged one after another.
+
+### C. Input Layer
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size.
+- `X_train.shape[1]` represents 3072 input features.
+- Each image contains 3072 pixel values.
+
+### D. First Hidden Layer
+
+```python
+Dense(256, activation="relu")
+```
+
+- Contains 256 neurons.
+- Uses ReLU activation.
+- Learns basic patterns from image pixel values.
+
+### E. Second Hidden Layer
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns more complex patterns and features.
+
+### F. Output Layer
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one object category.
+- Softmax produces probability scores for all 10 categories.
+- The category with the highest probability is selected as the prediction.
+
+### FNN Architecture Diagram
+
+```text
+         CIFAR-10 Image
+           32 × 32 × 3
+                |
+                v
+          Flatten Layer
+            3072 Values
+                |
+                v
+         Hidden Layer 1
+           256 Neurons
+              ReLU
+                |
+                v
+         Hidden Layer 2
+           128 Neurons
+              ReLU
+                |
+                v
+           Output Layer
+            10 Neurons
+              Softmax
+                |
+                v
+       Predicted Object Category
+       (Airplane, Cat, Dog, etc.)
+```
+
+---
+
+## Step 5: Compile the Model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Calculates prediction error for multi-class classification with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correctly classified images. |
+
+**What is Adam Optimizer?**
+
+Adam is an optimization algorithm that updates the model's weights and biases to minimize loss.
+
+**What is Sparse Categorical Crossentropy?**
+
+It is a loss function used for multi-class classification when actual class labels are represented as integers.
+
+**What is Accuracy?**
+
+Accuracy measures the percentage of correct predictions.
+
+---
+
+## Step 6: Train the Model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This step trains the FNN using training images and their actual object labels.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=15` | Model processes the complete training dataset 15 times. |
+| `batch_size=128` | Processes 128 images before updating weights. |
+| `verbose=0` | Hides training progress output. |
+
+**What is an Epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**What is Batch Size?**
+
+The number of training samples processed together before updating model weights.
+
+---
+
+## Step 7: Evaluate on Test Data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This evaluates the trained model using testing data.
+
+- `model.evaluate()`: Evaluates model performance.
+- `X_test`: Testing images.
+- `y_test`: Actual testing labels.
+- `_`: Stores and ignores the loss value.
+- `test_accuracy`: Stores testing accuracy.
+- `verbose=0`: Hides evaluation progress.
+
+### Display Testing Accuracy
+
+```python
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- `test_accuracy * 100`: Converts accuracy into percentage.
+- `:.2f`: Displays the result up to two decimal places.
+- `print()`: Displays the final result.
+
+**Why do we evaluate the model?**
+
+To check how well the trained model classifies unseen images.
+
+---
+
+## Step 8: Predict Test Images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This statement predicts the object categories of testing images.
+
+Let's understand it:
+
+**1. `model.predict(X_test, verbose=0)`**
+
+Uses the trained model to predict the test images.
+
+It returns probability scores for all 10 object categories.
+
+**2. `np.argmax()`**
+
+Finds the index of the highest probability.
+
+**3. `axis=1`**
+
+Performs the operation row-wise for each test image.
+
+**4. `y_pred`**
+
+Stores the predicted class labels.
+
+Example:
+
+Suppose the model produces:
+
+| Object | Probability |
+|---|---:|
+| Airplane | 0.05 |
+| Automobile | 0.03 |
+| Bird | 0.02 |
+| Cat | 0.10 |
+| Deer | 0.02 |
+| Dog | 0.65 |
+| Frog | 0.03 |
+| Horse | 0.04 |
+| Ship | 0.03 |
+| Truck | 0.03 |
+
+The highest probability is `0.65`, so the predicted object is **Dog (5)**.
+
+---
+
+## Step 9: Display Five Examples
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a figure of width 14 and height 4.
+
+```python
+for i in range(5):
+```
+
+Repeats the following operations five times to display five test images.
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+- Selects the `i-th` testing image.
+- Reshapes its 3072 values back into 32 × 32 × 3 format.
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+Divides the figure into one row and five columns.
+
+`i + 1` specifies the position of each image.
+
+```python
+plt.imshow(image)
+```
+
+Displays the color image using Matplotlib.
+
+Unlike grayscale images, RGB images do not require `cmap="gray"`.
+
+### Display Actual and Predicted Labels
+
+```python
+plt.title(
+    f"Actual: {class_names[int(y_test[i])]}\n"
+    f"Predicted: {class_names[int(y_pred[i])]}"
+)
+```
+
+Displays two labels above each image:
+
+- **Actual:** Correct object category from the dataset.
+- **Predicted:** Object category predicted by the model.
+
+`int()` converts the label into an integer so it can be used as a list index.
+
+`\n` moves the predicted label to the next line.
+
+```python
+plt.axis("off")
+```
+
+Hides the X-axis and Y-axis.
+
+```python
+plt.tight_layout()
+```
+
+Adjusts spacing so that images and titles do not overlap.
+
+```python
+plt.show()
+```
+
+Displays the final five images with their actual and predicted labels.
+
+---
+
+# 3. Understanding the Final Output
+
+The practical produces two main outputs:
+
+### Output 1: Testing Accuracy
+
+Displays the percentage of test images correctly classified by the trained model.
+
+### Output 2: Five Predicted Images
+
+Displays five color images with:
+
+- Actual object category.
+- Predicted object category.
+
+Example of output interpretation:
+
+| Image | Actual | Predicted | Result |
+|---|---|---|---|
+| 1 | Airplane | Airplane | Correct |
+| 2 | Cat | Cat | Correct |
+| 3 | Dog | Cat | Incorrect |
+| 4 | Automobile | Automobile | Correct |
+| 5 | Ship | Ship | Correct |
+
+*This is an illustrative example, not your actual execution output.*
+
+If actual and predicted labels are the same, the prediction is correct. Otherwise, it is incorrect.
+
+---
+
+# 4. Important External Viva Questions and Answers
+
+### Q1. What is CIFAR-10?
+CIFAR-10 is an image dataset containing 60,000 color images divided into 10 different object categories.
+
+### Q2. What is the full form of CIFAR?
+Canadian Institute for Advanced Research.
+
+### Q3. How many images are present in CIFAR-10?
+60,000 images.
+
+### Q4. How many classes are present in CIFAR-10?
+10 classes.
+
+### Q5. Name the 10 classes of CIFAR-10.
+1. Airplane
+2. Automobile
+3. Bird
+4. Cat
+5. Deer
+6. Dog
+7. Frog
+8. Horse
+9. Ship
+10. Truck
+
+### Q6. What is the size of each image?
+32 × 32 pixels.
+
+### Q7. Is CIFAR-10 a grayscale or color dataset?
+It is a color image dataset containing RGB images.
+
+### Q8. What is RGB?
+RGB stands for Red, Green and Blue. These three channels are used to represent colors in an image.
+
+### Q9. How many channels are present in a CIFAR-10 image?
+Three channels: Red, Green and Blue.
+
+### Q10. What is an FNN?
+FNN stands for Feedforward Neural Network. Information flows from the input layer through hidden layers to the output layer in one direction.
+
+### Q11. Why is flattening required?
+Flattening converts a 32 × 32 × 3 image into a one-dimensional array containing 3072 values.
+
+### Q12. Why do we normalize images?
+Normalization converts pixel values from 0–255 into 0–1, helping the model train efficiently.
+
+### Q13. What is the purpose of `train_test_split()`?
+It divides the dataset into training and testing datasets.
+
+### Q14. What does `test_size=0.2` mean?
+It means 20% of the dataset is used for testing and 80% for training.
+
+### Q15. What is the purpose of `stratify=y`?
+It maintains approximately equal class proportions in training and testing datasets.
+
+### Q16. What is the purpose of `random_state=42`?
+It ensures that the dataset is split consistently when the code is run again.
+
+### Q17. How many input features are present?
+3072 features per image.
+
+### Q18. How many neurons are present in the first hidden layer?
+256 neurons.
+
+### Q19. How many neurons are present in the second hidden layer?
+128 neurons.
+
+### Q20. How many neurons are present in the output layer?
+10 neurons because there are 10 object categories.
+
+### Q21. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+### Q22. What is Softmax?
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Q23. What is the Adam optimizer?
+Adam is an optimization algorithm that updates model weights to reduce prediction errors.
+
+### Q24. What is an Epoch?
+One complete pass through the entire training dataset.
+
+### Q25. What is Batch Size?
+The number of training samples processed together before updating model weights.
+
+### Q26. What is Sparse Categorical Crossentropy?
+It is a loss function used for multi-class classification when actual class labels are represented as integers.
+
+### Q27. What is the purpose of `model.fit()`?
+It trains the neural network using training images and their actual labels.
+
+### Q28. What is the purpose of `model.evaluate()`?
+It evaluates the trained model on testing data and returns the loss and accuracy.
+
+### Q29. What is the purpose of `model.predict()`?
+It predicts the output for new input images.
+
+### Q30. What is the purpose of `np.argmax()`?
+It returns the index of the highest probability, which represents the predicted class.
+
+### Q31. What is the difference between FNN and CNN?
+
+| FNN | CNN |
+|---|---|
+| Uses Dense layers. | Uses convolutional and Dense layers. |
+| Requires flattened images. | Can process images in 2D form. |
+| Does not directly preserve spatial relationships after flattening. | Learns spatial features such as edges and shapes. |
+| Generally less effective for image classification. | Generally more effective for image classification. |
+
+### Q32. Why is CNN generally better than FNN for CIFAR-10?
+CNN automatically extracts important image features such as edges, shapes and patterns while preserving spatial information. FNN uses flattened pixel values, so spatial relationships are not directly preserved.
+
+---
+
+# 5. Important Differences for Viva
+
+### MNIST vs Fashion-MNIST vs CIFAR-10
+
+| Feature | MNIST | Fashion-MNIST | CIFAR-10 |
+|---|---|---|---|
+| Dataset | Handwritten digits | Clothing items | Object images |
+| Image size | 28 × 28 | 28 × 28 | 32 × 32 |
+| Image type | Grayscale | Grayscale | RGB color |
+| Channels | 1 | 1 | 3 |
+| Classes | 10 | 10 | 10 |
+| Input features after flattening | 784 | 784 | 3072 |
+
+### FNN vs CNN
+
+| FNN | CNN |
+|---|---|
+| Feedforward Neural Network | Convolutional Neural Network |
+| Uses Dense layers. | Uses Conv2D, pooling and Dense layers. |
+| Images are flattened. | Images can be processed in their original spatial form. |
+| Learns from flattened pixel values. | Extracts spatial image features. |
+| Less suitable for complex image data. | More suitable for image classification. |
+
+---
+
+# 6. Quick Revision Before Viva
+
+| Topic | Answer |
+|---|---|
+| Practical | CIFAR-10 object classification |
+| Model | FNN |
+| Dataset | CIFAR-10 |
+| Total images | 60,000 |
+| Number of classes | 10 |
+| Image size | 32 × 32 |
+| Image type | RGB color |
+| Number of channels | 3 |
+| Original pixel range | 0–255 |
+| Normalized range | 0–1 |
+| Input features | 3072 |
+| Training data | 80% |
+| Testing data | 20% |
+| First hidden layer | 256 neurons |
+| Second hidden layer | 128 neurons |
+| Output layer | 10 neurons |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Prediction | `model.predict()` |
+| Highest probability | `np.argmax()` |
+| Display library | Matplotlib |
+
+---
+
+# 7. Explain This Practical to the External Examiner
+
+Memorize this short explanation:
+
+"This practical implements a Feedforward Neural Network to classify images into 10 object categories using the CIFAR-10 dataset. First, we load the dataset from a CSV file and separate image pixels and labels. We reshape the images into 32 × 32 × 3 format and normalize pixel values between 0 and 1. Then we divide the dataset into 80% training data and 20% testing data using train_test_split. Each image is flattened into 3072 values. We build an FNN using two hidden Dense layers containing 256 and 128 neurons with ReLU activation. The output layer contains 10 neurons with Softmax activation. We compile the model using the Adam optimizer and sparse categorical crossentropy loss. Then we train it for 15 epochs with a batch size of 128. Finally, we evaluate testing accuracy, predict object categories and display five images with their actual and predicted labels."
+
+---
+
+## 8. Final Code Verdict
+
+**Your Chit 14 code is correct, provided your `cifar-10.csv` file has the expected format.**
+
+The expected CSV structure is:
+- One `label` column.
+- 3072 pixel columns per image.
+- Pixel columns ordered as RGB channel data in the format expected by your reshape operation.
+
+Your code covers all the requirements:
+- CIFAR-10 dataset loading.
+- Image preprocessing and normalization.
+- Training/testing split.
+- Image flattening.
+- FNN construction and training.
+- Testing accuracy evaluation.
+- Predicted class labels for five test images.
+
+**Important viva point:** This practical uses an FNN, not a CNN. CIFAR-10 contains color images, but the FNN receives flattened pixel values rather than extracting spatial features using convolutional layers.

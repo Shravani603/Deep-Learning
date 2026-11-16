@@ -510,3 +510,692 @@ The graph appears to show nearly perfect validation performance. Check the **pri
 
 22. **Why does `model.evaluate()` return two values here?**  
     Because the model was compiled with a loss function and accuracy metric. It returns loss first, then accuracy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 8: Sign Language CNN – Accuracy and Loss Graphs
+
+## 1. Aim
+
+To construct a **Convolutional Neural Network (CNN)** model to recognize Sign Language alphabets, normalize image pixels, train the model, calculate training and testing accuracy, and display accuracy and loss graphs.
+
+---
+
+## 2. Explanation of the Code
+
+### Step 1: Import the libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+| Library / Function | Purpose |
+|---|---|
+| `numpy` | Performs numerical operations on arrays. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the shape of input images. |
+| `Dense` | Creates fully connected neural network layers. |
+| `pandas` | Reads and handles CSV datasets. |
+| `Conv2D` | Extracts features from images using convolution. |
+| `MaxPooling2D` | Reduces image dimensions while keeping important features. |
+| `Flatten` | Converts 2D feature maps into a 1D array. |
+| `LabelEncoder` | Converts class labels into numerical values. |
+| `matplotlib.pyplot` | Displays accuracy and loss graphs. |
+
+**Important:** CNN uses convolution and pooling layers to identify important image features, such as edges, shapes and patterns.
+
+---
+
+### Step 2: Load and prepare Sign Language MNIST
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+- `pd.read_csv()` reads a CSV file.
+- `train_df` stores the training dataset.
+- `test_df` stores the testing dataset.
+- The dataset contains hand gesture images and their corresponding alphabet labels.
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+**Explanation:**
+
+- `drop(columns="label")` removes the label column and keeps only image pixels.
+- `to_numpy()` converts the data into a NumPy array.
+- `dtype="float32"` converts pixel values into decimal numbers.
+- `/ 255.0` normalizes pixel values.
+
+**Why divide by 255?**
+
+Original grayscale pixel values range from 0 to 255.
+
+After normalization, values range from 0 to 1.
+
+Example:
+
+- Original pixel value = 255
+- Normalized value = 255 / 255 = 1
+- Original pixel value = 128
+- Normalized value = 128 / 255 = 0.50 approximately.
+
+**Why normalize?**
+
+It helps the model learn faster and improves training stability.
+
+```python
+encoder = LabelEncoder()
+y_train = encoder.fit_transform(train_df["label"])
+y_test = encoder.transform(test_df["label"])
+```
+
+**Explanation:**
+
+- `LabelEncoder()` creates a label encoder.
+- `fit_transform()` learns the labels and converts them into numerical values.
+- `transform()` converts testing labels using the same encoding.
+
+For example, alphabet labels are represented using numerical class values.
+
+**Difference:**
+- `fit_transform()` learns and converts.
+- `transform()` only converts using already learned information.
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+This converts numerical labels into alphabet characters.
+
+- `chr()` converts an ASCII number into a character.
+- `65` is the ASCII value of capital A.
+
+For example:
+
+- 0 → A
+- 1 → B
+- 2 → C
+
+The Sign Language MNIST dataset contains 24 classes because J and Z are excluded. These gestures require movement.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image shape:
+
+- `28` = image height.
+- `28` = image width.
+- `1` = one grayscale channel.
+
+---
+
+### Step 3: Reshape the images
+
+```python
+X_train = X_train.reshape(-1, 28, 28, 1)
+X_test = X_test.reshape(-1, 28, 28, 1)
+```
+
+**Explanation:**
+
+Initially, each image contains 784 pixel values in a single row.
+
+But CNN requires images in 3D format:
+
+`Height × Width × Channels`
+
+Therefore, each image is reshaped into:
+
+`28 × 28 × 1`
+
+**What does `-1` mean?**
+
+It automatically calculates the number of images based on the available data.
+
+**Why reshape?**
+
+CNN requires image data in height, width and channel format to perform convolution operations.
+
+---
+
+### Step 4: Build the CNN model
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the total number of alphabet classes.
+
+Here, the number of classes is 24.
+
+```python
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This creates the CNN architecture.
+
+**Layer-by-layer explanation:**
+
+**1. Input Layer**
+
+```python
+Input(shape=X_train.shape[1:])
+```
+
+- Defines the input image dimensions.
+- Each image has shape `28 × 28 × 1`.
+
+**2. First Convolution Layer**
+
+```python
+Conv2D(32, (3, 3), activation="relu")
+```
+
+- `Conv2D` performs convolution on images.
+- `32` means 32 filters are used.
+- `(3,3)` is the filter size.
+- `relu` is the activation function.
+
+**Purpose:** Extracts basic features such as edges, lines and shapes from images.
+
+**3. First Max Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Uses a 2 × 2 pooling window.
+- Reduces the size of feature maps.
+- Keeps important features and removes unnecessary information.
+
+**4. Second Convolution Layer**
+
+```python
+Conv2D(64, (3, 3), activation="relu")
+```
+
+- Uses 64 filters.
+- Extracts more complex features from the images.
+
+**5. Second Max Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+Further reduces the feature map size.
+
+**6. Flatten Layer**
+
+```python
+Flatten()
+```
+
+Converts the 2D feature maps into a 1D vector.
+
+This makes the data suitable for fully connected layers.
+
+**7. Fully Connected Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns patterns from the extracted features.
+- Uses ReLU activation.
+
+**8. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 24 output neurons.
+- Each neuron represents one alphabet class.
+- Softmax calculates the probability of each class.
+- The class with the highest probability is selected as the prediction.
+
+---
+
+### Step 5: Compile and train the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Before training, we compile the model.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted classes when labels are integers. |
+| `metrics=["accuracy"]` | Calculates the percentage of correct predictions. |
+
+**What is Adam?**
+
+Adam is an optimization algorithm that adjusts weights and biases to improve model performance.
+
+**What is loss?**
+
+Loss measures how incorrect the model's predictions are.
+
+Lower loss means better predictions.
+
+---
+
+### Step 6: Prepare and run the model
+
+```python
+history = model.fit(
+    X_train, y_train,
+    epochs=10,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+This trains the CNN model.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual training labels. |
+| `epochs=10` | Model trains for 10 complete rounds. |
+| `batch_size=128` | Processes 128 images at a time. |
+| `validation_split=0.1` | Uses 10% of training data for validation. |
+| `verbose=0` | Does not display training progress in the output. |
+| `history` | Stores training and validation accuracy and loss after every epoch. |
+
+**What is an epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**What is batch size?**
+
+The number of training images processed before the model updates its weights.
+
+**What is validation data?**
+
+Validation data is used to check how well the model performs on data that it is not directly training on.
+
+Here, 10% of the training data is used for validation.
+
+---
+
+### Step 7: Evaluate on test data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+- `model.evaluate()` checks model performance on testing data.
+- `X_test` contains testing images.
+- `y_test` contains actual testing labels.
+- `verbose=0` hides evaluation progress.
+
+It returns two values:
+
+1. Test loss.
+2. Test accuracy.
+
+`_` stores the loss, which we are not using here.
+
+`test_accuracy` stores the testing accuracy.
+
+```python
+train_accuracy = history.history["accuracy"][-1]
+```
+
+- `history.history["accuracy"]` contains training accuracy for all 10 epochs.
+- `[-1]` selects the accuracy of the last epoch.
+
+```python
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+```
+
+Displays training and testing accuracy as percentages.
+
+- `* 100` converts decimal accuracy into percentage.
+- `:.2f` displays two digits after the decimal point.
+
+**Difference between training and testing accuracy:**
+
+- Training accuracy tells how correctly the model predicts training images.
+- Testing accuracy tells how correctly the model predicts unseen testing images.
+
+Testing accuracy is important because it shows how well the model can recognize new images.
+
+---
+
+### Step 8: Plot accuracy and loss
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a graph figure of width 12 inches and height 4 inches.
+
+```python
+plt.subplot(1, 2, 1)
+```
+
+Divides the figure into 1 row and 2 columns and selects the first graph.
+
+#### A. Accuracy Graph
+
+```python
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+```
+
+**Explanation:**
+
+- `plot()` draws the graph.
+- `history.history["accuracy"]` contains training accuracy.
+- `history.history["val_accuracy"]` contains validation accuracy.
+- `title()` gives the graph title.
+- `xlabel()` labels the X-axis.
+- `ylabel()` labels the Y-axis.
+- `legend()` displays the labels of the graph lines.
+
+**How to understand the accuracy graph?**
+
+- X-axis represents epochs.
+- Y-axis represents accuracy.
+- Training accuracy shows performance on training data.
+- Validation accuracy shows performance on validation data.
+
+Generally, accuracy should increase as training progresses.
+
+#### B. Loss Graph
+
+```python
+plt.subplot(1, 2, 2)
+```
+
+Selects the second graph.
+
+```python
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+```
+
+**Explanation:**
+
+- `loss` represents training loss.
+- `val_loss` represents validation loss.
+- The graph shows how the model's error changes during training.
+
+**How to understand the loss graph?**
+
+- X-axis represents epochs.
+- Y-axis represents loss.
+- Lower loss indicates better model predictions.
+- Generally, loss should decrease as training progresses.
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `tight_layout()` adjusts spacing between graphs.
+- `show()` displays both graphs.
+
+---
+
+## 3. Important Concepts to Remember
+
+| Concept | Simple Explanation |
+|---|---|
+| CNN | A deep learning model mainly used for image recognition. |
+| Convolution | Extracts important features from images. |
+| Filter | Detects features such as edges and patterns. |
+| Pooling | Reduces feature map dimensions. |
+| Flatten | Converts feature maps into a 1D array. |
+| Dense Layer | Learns patterns and performs classification. |
+| ReLU | Activation function that replaces negative values with zero. |
+| Softmax | Converts output values into class probabilities. |
+| Epoch | One complete pass through the training dataset. |
+| Batch Size | Number of samples processed before updating weights. |
+| Accuracy | Percentage of correct predictions. |
+| Loss | Measures prediction error. |
+| Validation Data | Checks model performance during training. |
+| Testing Data | Evaluates the final model on unseen data. |
+
+---
+
+# 4. External Viva Questions and Answers
+
+### Basic CNN Questions
+
+**Q1. What is CNN?**  
+CNN stands for Convolutional Neural Network. It is a deep learning algorithm mainly used for image recognition and classification.
+
+**Q2. Why do we use CNN for Sign Language recognition?**  
+Because CNN can automatically extract important features such as hand shape, edges and patterns from images.
+
+**Q3. What is the difference between ANN and CNN?**  
+- ANN uses fully connected layers.
+- CNN uses convolution and pooling layers to extract image features.
+- CNN is generally more suitable for image recognition.
+
+**Q4. What is a convolution layer?**  
+It extracts important features from an image using filters.
+
+**Q5. What is a filter in CNN?**  
+A filter is a small matrix that moves over an image to detect features such as edges and patterns.
+
+**Q6. What is pooling?**  
+Pooling reduces the dimensions of feature maps while retaining important information.
+
+**Q7. What is Max Pooling?**  
+Max Pooling selects the maximum value from a particular region, such as a 2 × 2 region.
+
+**Q8. What is the purpose of the Flatten layer?**  
+It converts 2D feature maps into a 1D vector.
+
+**Q9. What is a Dense layer?**  
+A Dense layer is a fully connected layer in which every neuron is connected to all neurons in the previous layer.
+
+**Q10. What is ReLU?**  
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+**Q11. What is Softmax?**  
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Dataset and Preprocessing Questions
+
+**Q12. Which dataset is used in this practical?**  
+Sign Language MNIST dataset.
+
+**Q13. What is the size of each image?**  
+28 × 28 pixels.
+
+**Q14. Is the dataset grayscale or RGB?**  
+It is grayscale.
+
+**Q15. Why do we divide pixel values by 255?**  
+To normalize pixel values from the range 0–255 to 0–1.
+
+**Q16. Why do we reshape the images?**  
+CNN requires image data in height, width and channel format.
+
+**Q17. Why is the channel value 1?**  
+Because the images are grayscale and have only one channel.
+
+**Q18. How many classes are present in Sign Language MNIST?**  
+There are 24 classes because J and Z are excluded.
+
+**Q19. Why are J and Z excluded?**  
+Their sign language gestures require movement, so they cannot be represented properly using a single static image.
+
+**Q20. What is Label Encoding?**  
+It converts categorical labels into numerical values.
+
+### Training and Evaluation Questions
+
+**Q21. What is an epoch?**  
+One complete pass through the entire training dataset.
+
+**Q22. What is batch size?**  
+The number of samples processed before updating model weights.
+
+**Q23. What is an optimizer?**  
+An optimizer updates the model's weights to reduce loss.
+
+**Q24. Which optimizer is used in this practical?**  
+Adam optimizer.
+
+**Q25. What is a loss function?**  
+It measures the difference between actual and predicted outputs.
+
+**Q26. Which loss function is used here?**  
+Sparse categorical crossentropy.
+
+**Q27. Why do we use sparse categorical crossentropy?**  
+Because we have multiple classes and the target labels are provided as integers.
+
+**Q28. What is training accuracy?**  
+The percentage of correct predictions on training data.
+
+**Q29. What is testing accuracy?**  
+The percentage of correct predictions on unseen testing data.
+
+**Q30. What is validation data?**  
+Data used during training to check how well the model performs on unseen samples.
+
+**Q31. What does `validation_split=0.1` mean?**  
+It reserves 10% of the training data for validation.
+
+**Q32. What is overfitting?**  
+Overfitting occurs when a model performs very well on training data but poorly on unseen data.
+
+**Q33. How can we reduce overfitting?**  
+By using dropout, data augmentation, regularization, early stopping or more training data.
+
+### Graph-Related Questions
+
+**Q34. Why do we plot accuracy and loss graphs?**  
+To understand how the model's performance changes during training.
+
+**Q35. What does the accuracy graph show?**  
+It shows training and validation accuracy across epochs.
+
+**Q36. What does the loss graph show?**  
+It shows training and validation loss across epochs.
+
+**Q37. What should happen to accuracy during training?**  
+Generally, accuracy should increase.
+
+**Q38. What should happen to loss during training?**  
+Generally, loss should decrease.
+
+**Q39. What does increasing training accuracy but decreasing validation accuracy indicate?**  
+It may indicate overfitting.
+
+**Q40. What does `history.history` store?**  
+It stores training and validation metrics, such as accuracy and loss, for every epoch.
+
+---
+
+## 5. Quick Revision – Explain Your Practical in Viva
+
+If the external examiner asks, **"Explain what you have done in this practical,"** you can answer:
+
+> In this practical, I have developed a CNN model to recognize Sign Language alphabets using the Sign Language MNIST dataset. First, I loaded the training and testing datasets and normalized the pixel values between 0 and 1. Then, I reshaped the images into 28 × 28 × 1 format. I created a CNN model using convolution, max pooling, flatten and dense layers. After that, I compiled the model using Adam optimizer and sparse categorical crossentropy loss function. I trained the model for 10 epochs and evaluated its training and testing accuracy. Finally, I plotted the training and validation accuracy and loss graphs to understand the model's performance.
+
+**Important points to remember for this chit:**
+1. Dataset: Sign Language MNIST.
+2. Image size: 28 × 28 × 1.
+3. Number of classes: 24.
+4. Normalization: Divide pixel values by 255.
+5. CNN layers: Conv2D, MaxPooling2D, Flatten and Dense.
+6. Optimizer: Adam.
+7. Loss function: Sparse categorical crossentropy.
+8. Epochs: 10.
+9. Batch size: 128.
+10. Graphs: Accuracy and Loss.
+
+**Note:** Your code is correct for the given practical. The exact training and testing accuracy will depend on the dataset and training run.

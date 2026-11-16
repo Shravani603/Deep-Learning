@@ -438,3 +438,761 @@ The printed vectors are the learned embeddings for the first five vocabulary wor
 
 20. **Are the displayed embeddings guaranteed to be the same every run?**  
     No. Training and initial weights can vary, so the learned vector values may differ.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 31: CBOW Word Embeddings and Predictions
+
+## 1. Aim
+
+To implement a **Continuous Bag of Words (CBOW)** model using a small text corpus. The model learns word embeddings, generates context-target word pairs, predicts the target word from surrounding context words, and displays the learned word vectors.
+
+---
+
+# 2. What is CBOW?
+
+**CBOW stands for Continuous Bag of Words.**
+
+It is a Word2Vec model used in Natural Language Processing (NLP) to learn word representations (embeddings).
+
+### Working of CBOW
+
+CBOW predicts a **target word using its surrounding context words**.
+
+For example:
+
+Sentence:  
+`The speed of transmission is an important point.`
+
+If the target word is `of`, its context words are:
+
+- Two words before: `the`, `speed`
+- Two words after: `transmission`, `is`
+
+Therefore:
+
+**Input:** the, speed, transmission, is  
+**Output:** of
+
+### CBOW diagram
+
+```text
+       Context Words (Input)
+    ┌───────┬───────┬──────────────┬──────┐
+    │  the  │ speed │ transmission │  is  │
+    └───────┴───────┴──────────────┴──────┘
+                      |
+                      v
+                Embedding Layer
+                      |
+                      v
+             Global Average Pooling
+                      |
+                      v
+                Softmax Layer
+                      |
+                      v
+               Predicted Word
+                     "of"
+```
+
+---
+
+# 3. Step-by-Step Code Explanation
+
+## Step 1: Prepare a Text Corpus
+
+```python
+import re
+import numpy as np
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Embedding, GlobalAveragePooling1D, Dense
+```
+
+### Explanation
+
+| Code | Meaning |
+|---|---|
+| `import re` | Imports the regular expression module to clean text. |
+| `import numpy as np` | Imports NumPy for numerical operations and arrays. |
+| `Sequential` | Creates a neural network layer by layer. |
+| `Input` | Defines the input shape of the model. |
+| `Embedding` | Converts word indexes into dense numerical vectors. |
+| `GlobalAveragePooling1D` | Calculates the average of the context word vectors. |
+| `Dense` | Creates a fully connected neural network layer. |
+
+### Read the text file
+
+```python
+with open("document3.txt", encoding="utf-8") as file:
+    text = file.read()
+```
+
+- `open()` opens the text file.
+- `"document3.txt"` is the input corpus file.
+- `encoding="utf-8"` supports different text characters.
+- `file.read()` reads the complete content.
+- The text is stored in the variable `text`.
+
+### Clean the text
+
+```python
+text = re.sub(r"[^a-z\s]", " ", text.lower())
+```
+
+This line performs two operations:
+
+1. `text.lower()` converts all text into lowercase.
+2. `re.sub()` replaces unwanted characters with spaces.
+
+Understanding the expression:
+
+- `[^a-z\s]` means any character other than lowercase letters and whitespace.
+- `" "` means replace those characters with a space.
+
+**Example:**
+
+Before cleaning:
+```text
+The Speed of Transmission!
+```
+
+After cleaning:
+```text
+the speed of transmission
+```
+
+### Tokenize the text
+
+```python
+words = text.split()
+```
+
+- `split()` divides the text into individual words.
+- Each word becomes a separate list element.
+
+Example:
+```python
+['the', 'speed', 'of', 'transmission']
+```
+
+This process is called **tokenization**.
+
+### Create vocabulary
+
+```python
+vocabulary = sorted(set(words))
+```
+
+- `set(words)` removes duplicate words.
+- `sorted()` arranges the unique words alphabetically.
+- The result is stored in `vocabulary`.
+
+Example:
+```python
+['a', 'an', 'and', 'appear', 'appearance']
+```
+
+### Create word-to-index mapping
+
+```python
+word_to_id = {word: i for i, word in enumerate(vocabulary)}
+```
+
+This assigns a unique numerical index to every word.
+
+Example:
+
+| Word | Index |
+|---|---:|
+| a | 0 |
+| an | 1 |
+| and | 2 |
+| appear | 3 |
+| appearance | 4 |
+
+### Create index-to-word mapping
+
+```python
+id_to_word = {i: word for word, i in word_to_id.items()}
+```
+
+This performs the reverse operation.
+
+For example:
+- `0` → `a`
+- `1` → `an`
+- `2` → `and`
+
+It helps convert predicted numerical indexes back into actual words.
+
+```python
+print("Vocabulary:", vocabulary)
+```
+
+Displays all unique words in the corpus.
+
+**Your output:** A vocabulary containing words such as `a`, `an`, `and`, `appear`, `appearance`, and so on.
+
+---
+
+## Step 2: Make Context and Target Pairs
+
+```python
+window_size = 2
+contexts, targets = [], []
+```
+
+- `window_size = 2` means two words are considered on each side of the target word.
+- `contexts` stores the surrounding words.
+- `targets` stores the middle word that the model must predict.
+
+Therefore:
+
+**Total context words = 2 × window size = 4 words.**
+
+### Generate context and target pairs
+
+```python
+for i in range(window_size, len(words) - window_size):
+```
+
+This loop moves through the sentence and selects each word as a possible target.
+
+- `len(words)` gives the total number of words.
+- The loop starts at index 2 because two previous words are needed.
+- It stops before the last two words because two following words are also needed.
+
+```python
+context_words = words[i-window_size:i] + words[i+1:i+window_size+1]
+```
+
+This selects the surrounding words while excluding the target word.
+
+Suppose the sentence is:
+
+`the speed of transmission is an important point`
+
+For target word `of`:
+
+- `words[i-window_size:i]` selects `the`, `speed`.
+- `words[i+1:i+window_size+1]` selects `transmission`, `is`.
+- `+` joins both lists.
+
+Therefore:
+
+```python
+context_words = ['the', 'speed', 'transmission', 'is']
+```
+
+```python
+contexts.append([word_to_id[word] for word in context_words])
+```
+
+Converts the four context words into numerical indexes and stores them in `contexts`.
+
+```python
+targets.append(word_to_id[words[i]])
+```
+
+Converts the target word into its numerical index and stores it in `targets`.
+
+### Convert into NumPy arrays
+
+```python
+X = np.array(contexts, dtype="int32")
+y = np.array(targets, dtype="int32")
+```
+
+- `X` contains context word indexes (input).
+- `y` contains target word indexes (output).
+- `dtype="int32"` stores values as 32-bit integers.
+
+### Display the first five pairs
+
+```python
+for i in range(min(5, len(X))):
+    print([id_to_word[index] for index in X[i]], "->", id_to_word[y[i]])
+```
+
+- `min(5, len(X))` ensures that at most five pairs are displayed.
+- `X[i]` gets the context indexes.
+- `id_to_word` converts indexes into words.
+- `y[i]` gets the target index.
+- `->` indicates that the context words are used to predict the target word.
+
+**Your output:**
+
+```text
+['the', 'speed', 'transmission', 'is'] -> of
+['speed', 'of', 'is', 'an'] -> transmission
+['of', 'transmission', 'an', 'important'] -> is
+['transmission', 'is', 'important', 'point'] -> an
+['is', 'an', 'point', 'of'] -> important
+```
+
+This confirms that the context-target pairs are generated correctly.
+
+---
+
+## Step 3: Train the CBOW Network
+
+```python
+embedding_size = 16
+```
+
+- Defines the size of each word embedding.
+- Every word is represented using a vector of 16 numerical values.
+- These values are learned during training.
+
+### Build the model
+
+```python
+model = Sequential([
+    Input(shape=(2 * window_size,)),
+    Embedding(input_dim=len(vocabulary), output_dim=embedding_size),
+    GlobalAveragePooling1D(),
+    Dense(len(vocabulary), activation="softmax")
+])
+```
+
+This is the most important part of the practical.
+
+Let's understand each layer.
+
+### 1. Input Layer
+
+```python
+Input(shape=(2 * window_size,))
+```
+
+- Defines the number of input context words.
+- Since `window_size = 2`, input size = 2 × 2 = 4.
+- The model receives four word indexes at a time.
+
+### 2. Embedding Layer
+
+```python
+Embedding(input_dim=len(vocabulary), output_dim=embedding_size)
+```
+
+This layer converts each word index into a dense numerical vector.
+
+- `input_dim` = total number of unique words in the vocabulary.
+- `output_dim=16` = each word is represented by 16 numbers.
+
+For example:
+
+```text
+the → [0.12, 0.45, -0.23, ...]
+speed → [0.31, -0.14, 0.56, ...]
+```
+
+These vectors are called **word embeddings**.
+
+The embedding values are learned during model training.
+
+### 3. Global Average Pooling Layer
+
+```python
+GlobalAveragePooling1D()
+```
+
+- Takes the embedding vectors of all four context words.
+- Calculates their average.
+- Produces one combined vector representing the context.
+
+**Why is it used?**
+
+It combines the information from all context words into a single vector before prediction.
+
+### 4. Dense Softmax Layer
+
+```python
+Dense(len(vocabulary), activation="softmax")
+```
+
+- Creates the output layer.
+- Number of neurons = vocabulary size.
+- Each neuron represents one possible target word.
+- Softmax calculates the probability of each word being the target.
+
+The word with the highest probability is selected as the prediction.
+
+### Compile the model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors during training. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted word indexes. |
+| `metrics=["accuracy"]` | Tracks the percentage of correct predictions during training. |
+
+**Why sparse categorical crossentropy?**
+
+Because target values in `y` are integer class indexes rather than one-hot encoded vectors.
+
+### Train the model
+
+```python
+history = model.fit(X, y, epochs=100, verbose=0)
+```
+
+- `model.fit()` trains the neural network.
+- `X` contains context words.
+- `y` contains target words.
+- `epochs=100` means the model goes through the training data 100 times.
+- `verbose=0` hides the training progress.
+- `history` stores training information such as loss and accuracy.
+
+```python
+print("Final training loss:", round(history.history["loss"][-1], 4))
+```
+
+- `history.history["loss"]` contains the loss values for all epochs.
+- `[-1]` selects the loss of the final epoch.
+- `round(..., 4)` rounds the value to four decimal places.
+
+**Your output:**
+
+```text
+Final training loss: 2.9183
+```
+
+This is the final training loss, not the model's accuracy.
+
+A lower loss generally indicates that the model's predictions are improving.
+
+---
+
+## Step 4: Predict a Target Word
+
+```python
+sample_context = X[0]
+```
+
+Selects the first context sample from the training data.
+
+```text
+['the', 'speed', 'transmission', 'is']
+```
+
+```python
+prediction = model.predict(sample_context.reshape(1, -1), verbose=0)
+```
+
+- `model.predict()` generates predictions.
+- `reshape(1, -1)` converts the context into a two-dimensional input.
+- `1` means one sample.
+- `-1` automatically calculates the remaining dimension.
+- `verbose=0` hides prediction progress.
+
+The model returns probabilities for all words in the vocabulary.
+
+```python
+predicted_word = id_to_word[int(np.argmax(prediction[0]))]
+```
+
+Let's understand this:
+
+- `prediction[0]` gets the probability values for the first sample.
+- `np.argmax()` finds the index having the highest probability.
+- `int()` converts the index into an integer.
+- `id_to_word` converts that index into the corresponding word.
+
+```python
+print("Context:", [id_to_word[index] for index in sample_context])
+print("Predicted target:", predicted_word)
+```
+
+Displays the context words and predicted target word.
+
+**Your output:**
+
+```text
+Context: ['the', 'speed', 'transmission', 'is']
+Predicted target: of
+```
+
+The model correctly predicts the target word `of`.
+
+---
+
+## Step 5: Display Learned Word Vectors
+
+This is the additional important step in Chit 31.
+
+```python
+embeddings = model.layers[0].get_weights()[0]
+```
+
+This line extracts the learned word embeddings from the Embedding layer.
+
+Understanding it:
+
+- `model.layers[0]` accesses the Embedding layer.
+- `get_weights()` retrieves the layer's weight matrix.
+- `[0]` extracts the embedding matrix.
+
+The embedding matrix contains one 16-dimensional vector for every word in the vocabulary.
+
+```python
+for i, word in enumerate(vocabulary[:5]):
+    print(word, np.round(embeddings[i], 3))
+```
+
+- `vocabulary[:5]` selects the first five words.
+- `enumerate()` provides both the index and word.
+- `embeddings[i]` retrieves the corresponding word vector.
+- `np.round(..., 3)` rounds each value to three decimal places.
+- `print()` displays the word and its vector.
+
+**Your output:**
+
+```text
+a [ 0.115 -0.316  0.328  0.466 ... ]
+
+an [ 0.534  0.343 -0.093  0.510 ... ]
+
+and [-0.571  0.099  0.070  0.008 ... ]
+
+appear [ 0.100  0.528  0.308 -0.526 ... ]
+
+appearance [ 0.003 -0.020  0.449  0.337 ... ]
+```
+
+### What does this output mean?
+
+- Each word is represented by 16 numerical values.
+- These values form the word's embedding vector.
+- The values are learned by the neural network during training.
+- Similar words may develop similar vector representations depending on their usage and context.
+
+**Important:** These are learned numerical representations, not dictionary meanings or manually assigned values.
+
+---
+
+# 4. Important Concepts for Viva
+
+| Term | Simple meaning |
+|---|---|
+| CBOW | Predicts a target word using surrounding context words. |
+| NLP | Natural Language Processing; enables computers to process human language. |
+| Corpus | Collection of text used for training. |
+| Tokenization | Dividing text into individual words. |
+| Vocabulary | Collection of unique words. |
+| Word Embedding | Numerical representation of a word. |
+| Context Words | Words surrounding the target word. |
+| Target Word | Word that the model needs to predict. |
+| Embedding Layer | Converts word indexes into numerical vectors. |
+| Global Average Pooling | Takes the average of context word vectors. |
+| Softmax | Converts output values into probabilities. |
+| Epoch | One complete pass through the training dataset. |
+| Adam | Optimization algorithm used to update weights. |
+
+---
+
+# 5. Important External Viva Questions and Answers
+
+### Q1. What is CBOW?
+CBOW stands for Continuous Bag of Words. It predicts a target word using its surrounding context words.
+
+### Q2. What is the full form of NLP?
+Natural Language Processing.
+
+### Q3. What is Word2Vec?
+Word2Vec is a technique used to learn numerical representations of words from text.
+
+### Q4. What is a corpus?
+A corpus is a collection of text documents used for NLP tasks.
+
+### Q5. What is tokenization?
+Tokenization is the process of dividing text into smaller units called tokens, usually words.
+
+### Q6. What is vocabulary?
+Vocabulary is the collection of all unique words present in the corpus.
+
+### Q7. What is the purpose of `word_to_id`?
+It assigns a unique numerical index to each word.
+
+### Q8. What is the purpose of `id_to_word`?
+It converts numerical indexes back into words.
+
+### Q9. What is a context word?
+A context word is a word surrounding the target word.
+
+### Q10. What is a target word?
+The target word is the word that the CBOW model tries to predict.
+
+### Q11. What is the purpose of window size?
+It determines how many words are considered on each side of the target word.
+
+### Q12. What does window size 2 mean?
+It means two words before and two words after the target word, giving four context words.
+
+### Q13. What is an Embedding layer?
+It converts integer word indexes into dense numerical vectors.
+
+### Q14. What is embedding size?
+Embedding size is the number of numerical values used to represent each word. Here, it is 16.
+
+### Q15. Why is GlobalAveragePooling1D used?
+It calculates the average of all context word vectors to create one combined representation.
+
+### Q16. Why is Softmax used?
+Softmax converts output values into probabilities for each possible target word.
+
+### Q17. Why is Adam used?
+Adam is an optimizer that updates the model weights to reduce prediction errors.
+
+### Q18. What is an epoch?
+One complete pass through the training dataset.
+
+### Q19. What is the purpose of `np.argmax()`?
+It returns the index of the highest probability, which identifies the predicted word.
+
+### Q20. What is the difference between CBOW and Skip-gram?
+
+| CBOW | Skip-gram |
+|---|---|
+| Predicts the target word from context words. | Predicts context words from the target word. |
+| Context → Target | Target → Context |
+
+### Q21. What is the purpose of `get_weights()`?
+It retrieves the learned weights from a neural network layer.
+
+### Q22. What does training loss 2.9183 represent?
+It represents the final training error calculated by the loss function. It is not accuracy.
+
+### Q23. Does this program display word embeddings?
+Yes. It extracts the embedding matrix and displays the vectors of the first five vocabulary words.
+
+### Q24. Why are word embeddings useful?
+They represent words numerically so that neural networks can process text and learn relationships between words.
+
+### Q25. What is the difference between one-hot encoding and word embedding?
+
+| One-hot encoding | Word embedding |
+|---|---|
+| Represents a word using a large vector of zeros and one 1. | Represents a word using a smaller dense numerical vector. |
+| Does not directly capture word relationships. | Can learn meaningful relationships between words. |
+
+---
+
+# 6. Quick Revision of the Complete Practical
+
+| Step | Operation | Important code |
+|---|---|---|
+| 1 | Import libraries | `import re`, `import numpy` |
+| 2 | Read text file | `open()` and `read()` |
+| 3 | Clean text | `re.sub()` |
+| 4 | Tokenization | `split()` |
+| 5 | Create vocabulary | `sorted(set(words))` |
+| 6 | Generate indexes | `word_to_id`, `id_to_word` |
+| 7 | Generate context-target pairs | `window_size = 2` |
+| 8 | Create arrays | `np.array()` |
+| 9 | Create embeddings | `Embedding()` |
+| 10 | Combine context vectors | `GlobalAveragePooling1D()` |
+| 11 | Predict target word | `Dense(..., activation="softmax")` |
+| 12 | Train model | `model.fit()` |
+| 13 | Predict word | `model.predict()` |
+| 14 | Select highest probability | `np.argmax()` |
+| 15 | Display word vectors | `get_weights()` |
+
+---
+
+# 7. Short Explanation to Tell the External Examiner
+
+You can explain the practical like this:
+
+"The aim of this practical is to implement a CBOW model to learn word embeddings and predict target words.
+
+First, I read a text corpus and cleaned it by converting the text into lowercase and removing unwanted characters. Then I performed tokenization and created a vocabulary containing unique words.
+
+Next, I generated context and target word pairs using a window size of 2. This means two words before and two words after are used to predict the middle word.
+
+After that, I created a neural network using an Embedding layer, Global Average Pooling layer and Softmax output layer. I trained the model using Adam optimizer and sparse categorical crossentropy for 100 epochs.
+
+Finally, I predicted a target word from the context and extracted the learned word embeddings. The model successfully predicted the word 'of' and displayed the learned vectors of the first five words."
+
+---
+
+## 8. Final Verdict
+
+**Your Chit 31 code is correct and covers all the requirements in the question.**
+
+| Requirement | Status |
+|---|---|
+| Prepare text corpus | ✅ |
+| Generate vocabulary | ✅ |
+| Generate context-target pairs | ✅ |
+| Use Embedding layer | ✅ |
+| Use Softmax output layer | ✅ |
+| Train CBOW model | ✅ |
+| Predict target word | ✅ |
+| Display learned word embeddings | ✅ |
+
+**Important points to remember:**
+
+1. CBOW = Context words → Target word.
+2. Window size 2 = Four context words.
+3. Embedding size 16 = Each word has 16 numerical values.
+4. Softmax predicts the target word.
+5. `np.argmax()` selects the word with the highest probability.
+6. `get_weights()` extracts learned embeddings.
+7. Your output predicts `of` correctly.
+
+**One limitation:** The model is trained and evaluated on the same small corpus. Therefore, the displayed prediction demonstrates how the model works, but it does not establish how accurately it predicts unseen text.

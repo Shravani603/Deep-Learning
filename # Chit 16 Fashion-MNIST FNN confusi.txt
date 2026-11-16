@@ -386,3 +386,673 @@ The matrix shows that the model often confuses visually similar clothing categor
 20. **Why might a shirt be classified as a T-shirt/top?**  
     Their shapes can look similar in small grayscale images, making them harder for the model to distinguish.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 16: Fashion-MNIST FNN – Confusion Matrix
+
+## 1. Aim
+
+To build a **Feedforward Neural Network (FNN)** for classifying clothing images using the Fashion-MNIST dataset, evaluate the model using test data, and generate a confusion matrix to analyze its performance.
+
+---
+
+## 2. Step-by-Step Code Explanation
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+```
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical operations and array handling. |
+| `import tensorflow as tf` | Imports TensorFlow for building and training the neural network. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the shape of input data. |
+| `Dense` | Creates a fully connected neural network layer. |
+| `matplotlib.pyplot` | Used to display the confusion matrix. |
+| `confusion_matrix` | Calculates the confusion matrix by comparing actual and predicted labels. |
+| `ConfusionMatrixDisplay` | Displays the confusion matrix as a graphical representation. |
+
+**Important:** A confusion matrix is used to understand how many predictions are correct and incorrect for each class.
+
+---
+
+### Step 2: Load and Prepare Fashion-MNIST
+
+```python
+from tensorflow.keras.datasets import fashion_mnist
+
+(X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
+```
+
+- `fashion_mnist` is a built-in clothing image dataset available in Keras.
+- `load_data()` loads the dataset and divides it into training and testing data.
+
+**Fashion-MNIST dataset contains:**
+
+| Property | Description |
+|---|---|
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 pixels |
+| Image type | Grayscale |
+| Number of classes | 10 |
+
+**The 10 clothing categories are:**
+
+| Label | Class name |
+|---:|---|
+| 0 | T-shirt/top |
+| 1 | Trouser |
+| 2 | Pullover |
+| 3 | Dress |
+| 4 | Coat |
+| 5 | Sandal |
+| 6 | Shirt |
+| 7 | Sneaker |
+| 8 | Bag |
+| 9 | Ankle boot |
+
+**What are X_train, y_train, X_test and y_test?**
+
+- `X_train`: Training images.
+- `y_train`: Actual labels of training images.
+- `X_test`: Testing images.
+- `y_test`: Actual labels of testing images.
+
+**Normalize the images:**
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `astype("float32")` converts pixel values into floating-point numbers.
+- Dividing by 255 converts pixel values from the range 0–255 into the range 0–1.
+
+**Why do we normalize?**
+
+Normalization helps the neural network learn faster and more efficiently.
+
+**Define class names:**
+
+```python
+class_names = ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
+               "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
+```
+
+- Stores the names of all 10 clothing categories.
+- These names are used to identify the classes in the confusion matrix.
+
+**Define image shape:**
+
+```python
+image_shape = (28, 28, 1)
+```
+
+- 28 = Height.
+- 28 = Width.
+- 1 = Grayscale channel.
+
+Note: This variable is defined but not used further in this practical.
+
+---
+
+### Step 3: Flatten the Images
+
+```python
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+```
+
+- Each image originally has a size of 28 × 28 pixels.
+- Total pixels = 28 × 28 = 784.
+- `reshape()` converts each 2D image into a 1D array.
+- `len(X_train)` represents 60,000 training images.
+- `len(X_test)` represents 10,000 testing images.
+
+**Why do we flatten images?**
+
+An FNN accepts one-dimensional input, so each 28 × 28 image is converted into 784 input values.
+
+Example:
+
+```text
+Before flattening: 28 × 28 pixels
+
+After flattening: 784 values
+```
+
+---
+
+### Step 4: Build the Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This code creates the Feedforward Neural Network.
+
+**1. Number of classes**
+
+```python
+num_classes = len(class_names)
+```
+
+- Calculates the number of clothing categories.
+- Here, `num_classes = 10`.
+
+**2. Sequential model**
+
+```python
+model = Sequential([...])
+```
+
+Creates a neural network in which layers are arranged one after another.
+
+**3. Input layer**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size as 784.
+- Accepts 784 pixel values from each image.
+
+**4. First hidden layer**
+
+```python
+Dense(256, activation="relu")
+```
+
+- Contains 256 neurons.
+- Uses ReLU activation.
+- Learns basic features and patterns from the images.
+
+**5. Second hidden layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns more complex features from the previous layer.
+
+**6. Output layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one clothing category.
+- Softmax generates probabilities for all 10 classes.
+- The class with the highest probability is selected as the prediction.
+
+**Neural Network Architecture:**
+
+```text
+        Input Layer
+        784 Neurons
+             |
+             ↓
+      Hidden Layer 1
+        256 Neurons
+       ReLU Activation
+             |
+             ↓
+      Hidden Layer 2
+        128 Neurons
+       ReLU Activation
+             |
+             ↓
+        Output Layer
+         10 Neurons
+      Softmax Activation
+             |
+             ↓
+   Predicted Clothing Category
+```
+
+---
+
+### Step 5: Compile and Train
+
+**Compile the model:**
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted classes. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**Why sparse categorical crossentropy?**
+
+Because this is a multiclass classification problem with 10 categories, and the labels are integer values from 0 to 9.
+
+**Train the model:**
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+- `model.fit()` trains the neural network.
+- `X_train`: Training images.
+- `y_train`: Actual training labels.
+- `epochs=15`: The model passes through the complete training dataset 15 times.
+- `batch_size=128`: Processes 128 images in one batch before updating weights.
+- `verbose=0`: Hides the training progress.
+
+---
+
+### Step 6: Predict Test Images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This step predicts the clothing categories for all test images.
+
+Let's understand it:
+
+**1. `model.predict(X_test, verbose=0)`**
+
+- Uses the trained model to predict the classes of testing images.
+- Produces probability values for all 10 classes for each image.
+
+For example, the model may produce:
+
+| Class | Probability |
+|---|---:|
+| T-shirt/top | 0.05 |
+| Trouser | 0.02 |
+| Pullover | 0.10 |
+| Dress | 0.03 |
+| Coat | 0.70 |
+| Sandal | 0.01 |
+| Shirt | 0.05 |
+| Sneaker | 0.01 |
+| Bag | 0.02 |
+| Ankle boot | 0.01 |
+
+Here, Coat has the highest probability.
+
+**2. `np.argmax()`**
+
+- Finds the index of the highest probability.
+- In the example, it returns `4`.
+- Therefore, the predicted category is Coat.
+
+**3. `axis=1`**
+
+- Finds the highest probability across the 10 classes for each image.
+- Returns one predicted class label per image.
+
+**4. `y_pred`**
+
+Stores all predicted labels of the testing images.
+
+---
+
+### Step 7: Generate the Confusion Matrix
+
+This is the most important part of this practical.
+
+```python
+cm = confusion_matrix(y_test, y_pred, labels=np.arange(num_classes))
+```
+
+**What is a confusion matrix?**
+
+A confusion matrix is a table used to evaluate a classification model by comparing the actual labels with the predicted labels.
+
+It shows:
+- How many images were classified correctly.
+- How many images were classified incorrectly.
+- Which classes are commonly confused with each other.
+
+**Understanding the code:**
+
+- `confusion_matrix()` calculates the confusion matrix.
+- `y_test` contains actual labels.
+- `y_pred` contains predicted labels.
+- `labels=np.arange(num_classes)` specifies the class labels from 0 to 9 in the correct order.
+
+The confusion matrix has 10 rows and 10 columns because there are 10 clothing categories.
+
+**How to read a confusion matrix?**
+
+- Rows represent **Actual Classes**.
+- Columns represent **Predicted Classes**.
+- Diagonal values represent correct predictions.
+- Non-diagonal values represent incorrect predictions.
+
+Example (illustrative values only):
+
+| Actual / Predicted | T-shirt | Trouser | Pullover |
+|---|---:|---:|---:|
+| T-shirt | 85 | 3 | 7 |
+| Trouser | 2 | 95 | 1 |
+| Pullover | 8 | 1 | 80 |
+
+Explanation:
+
+- T-shirt: 85 images were correctly classified as T-shirts.
+- 3 T-shirt images were incorrectly classified as Trousers.
+- 7 T-shirt images were incorrectly classified as Pullovers.
+- Trouser: 95 images were correctly classified as Trousers.
+
+**Important:** The numbers above are only an example to explain the matrix, not your actual output.
+
+---
+
+### Step 8: Display the Confusion Matrix
+
+```python
+display = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=class_names
+)
+```
+
+- `ConfusionMatrixDisplay` converts the calculated confusion matrix into a displayable format.
+- `confusion_matrix=cm` provides the calculated matrix.
+- `display_labels=class_names` displays clothing names instead of numeric labels.
+
+**Create the figure:**
+
+```python
+fig, ax = plt.subplots(figsize=(10, 10))
+```
+
+- Creates a figure and plotting area.
+- `fig` represents the complete figure.
+- `ax` represents the plotting area.
+- `figsize=(10,10)` sets the figure size.
+
+**Plot the confusion matrix:**
+
+```python
+display.plot(
+    ax=ax,
+    xticks_rotation="vertical",
+    colorbar=False,
+    cmap="Blues",
+    values_format="d"
+)
+```
+
+| Parameter | Explanation |
+|---|---|
+| `ax=ax` | Displays the matrix in the created plotting area. |
+| `xticks_rotation="vertical"` | Rotates the class names on the X-axis vertically. |
+| `colorbar=False` | Hides the color scale bar. |
+| `cmap="Blues"` | Uses blue shades to represent values. |
+| `values_format="d"` | Displays matrix values as integers. |
+
+**Add title:**
+
+```python
+plt.title("Confusion Matrix")
+```
+
+Adds the title to the graph.
+
+**Adjust layout:**
+
+```python
+plt.tight_layout()
+```
+
+Automatically adjusts spacing so labels do not overlap.
+
+**Display the graph:**
+
+```python
+plt.show()
+```
+
+Displays the final confusion matrix.
+
+---
+
+## 3. Understanding the Confusion Matrix Output
+
+Your practical generates a **10 × 10 confusion matrix**.
+
+
+
+### Important points to remember
+
+1. X-axis represents predicted clothing categories.
+2. Y-axis represents actual clothing categories.
+3. Diagonal cells represent correctly classified images.
+4. Other cells represent incorrectly classified images.
+5. Darker blue cells generally indicate higher numbers.
+6. A good model should have higher values along the diagonal and lower values outside the diagonal.
+
+**Example:**
+
+If the actual category is Shirt but the model predicts T-shirt/top, that count appears in:
+
+- Shirt row.
+- T-shirt/top column.
+
+This indicates that the model confused a Shirt image with a T-shirt image.
+
+### What does a good confusion matrix look like?
+
+- Most values should be concentrated along the diagonal.
+- Values outside the diagonal should be small.
+- This indicates that the model correctly identifies most clothing categories.
+
+**Note:** Your code does not print testing accuracy. It generates the confusion matrix to visually analyze classification performance.
+
+---
+
+## 4. Important Viva Questions and Answers
+
+### Q1. What is Fashion-MNIST?
+Fashion-MNIST is a dataset containing grayscale images of clothing items used for image classification.
+
+### Q2. How many images are present in Fashion-MNIST?
+It contains 70,000 images:
+- 60,000 training images.
+- 10,000 testing images.
+
+### Q3. How many classes are present?
+There are 10 clothing categories.
+
+### Q4. Name the 10 classes of Fashion-MNIST.
+T-shirt/top, Trouser, Pullover, Dress, Coat, Sandal, Shirt, Sneaker, Bag and Ankle boot.
+
+### Q5. What is the size of each image?
+28 × 28 pixels.
+
+### Q6. What is a confusion matrix?
+A confusion matrix is a performance evaluation tool used to compare actual and predicted classes of a classification model.
+
+### Q7. Why do we use a confusion matrix?
+To identify correct predictions, incorrect predictions and classes that the model commonly confuses.
+
+### Q8. What do rows and columns represent in a confusion matrix?
+- Rows represent actual classes.
+- Columns represent predicted classes.
+
+### Q9. What does the diagonal of a confusion matrix represent?
+The diagonal represents correctly classified images.
+
+### Q10. What do non-diagonal values represent?
+They represent incorrectly classified images.
+
+### Q11. What is a heatmap?
+A heatmap is a graphical representation of data where different colors represent different numerical values.
+
+### Q12. Why do we use `argmax()`?
+It returns the index of the highest probability, which represents the predicted class.
+
+### Q13. What is `axis=1` in `np.argmax()`?
+It finds the highest probability across the class dimension for each image.
+
+### Q14. What is Softmax?
+Softmax is an activation function that converts output values into probabilities for different classes.
+
+### Q15. Why do we use ReLU?
+ReLU introduces non-linearity into the neural network and converts negative values into zero.
+
+### Q16. What is a Dense layer?
+A Dense layer is a fully connected layer where every neuron is connected to all neurons in the previous layer.
+
+### Q17. Why do we flatten the images?
+We flatten images because FNN accepts one-dimensional input instead of 2D images.
+
+### Q18. Why do we normalize pixel values?
+To convert pixel values from 0–255 into 0–1, helping the model train efficiently.
+
+### Q19. Which library is used to generate the confusion matrix?
+Scikit-learn.
+
+### Q20. Which function calculates the confusion matrix?
+`confusion_matrix()` from `sklearn.metrics`.
+
+### Q21. What is the purpose of `ConfusionMatrixDisplay`?
+It displays the confusion matrix in graphical form.
+
+### Q22. What is the difference between accuracy and a confusion matrix?
+- Accuracy gives the overall percentage of correct predictions.
+- Confusion matrix shows correct and incorrect predictions for individual classes.
+
+### Q23. What is a false prediction?
+A false prediction occurs when the model predicts a class different from the actual class.
+
+### Q24. Can a confusion matrix be used for multiclass classification?
+Yes. It can be used for both binary and multiclass classification.
+
+### Q25. Why can a model confuse Shirt and T-shirt?
+Because their shapes and visual features are similar, making them difficult to distinguish.
+
+---
+
+## 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Dataset | Fashion-MNIST |
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 |
+| Image type | Grayscale |
+| Number of classes | 10 |
+| Input neurons | 784 |
+| Hidden layer 1 | 256 neurons |
+| Hidden layer 2 | 128 neurons |
+| Output neurons | 10 |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Prediction function | `model.predict()` |
+| Highest probability | `np.argmax()` |
+| Confusion matrix | `confusion_matrix()` |
+| Display function | `ConfusionMatrixDisplay` |
+| Plotting library | Matplotlib |
+
+---
+
+## 6. Short Explanation to Tell the External Examiner
+
+"I have implemented a Feedforward Neural Network using the Fashion-MNIST dataset to classify clothing images into 10 categories.
+
+First, I loaded the dataset, which contains 60,000 training images and 10,000 testing images. Each image is 28 × 28 pixels. I normalized the pixel values between 0 and 1 and flattened each image into 784 features.
+
+Then, I created an FNN with two hidden Dense layers containing 256 and 128 neurons using ReLU activation. The output layer contains 10 neurons with Softmax activation.
+
+I compiled the model using the Adam optimizer and sparse categorical crossentropy loss function and trained it for 15 epochs.
+
+After training, I predicted the classes of test images using `model.predict()` and `np.argmax()`. Finally, I generated a confusion matrix using Scikit-learn and displayed it using Matplotlib to analyze correct and incorrect predictions."
+
+---
+
+## 7. Final Verdict
+
+**Your code is correct and matches Chit 16.**
+
+- Fashion-MNIST dataset is loaded correctly.
+- Images are normalized and flattened correctly.
+- FNN architecture is correct.
+- Model is compiled and trained correctly.
+- Predictions are generated correctly.
+- Confusion matrix is calculated and displayed correctly.
+
+**Most important viva points for this practical:**
+
+1. What is a confusion matrix?
+2. What do rows and columns represent?
+3. What does the diagonal represent?
+4. What is `argmax()`?
+5. Difference between accuracy and confusion matrix.
+6. Difference between actual and predicted labels.

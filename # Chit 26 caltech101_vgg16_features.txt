@@ -478,3 +478,1002 @@ The classifier correctly predicted **86.67% of the held-out test images** among 
 
 20. **Which part of the model is trained in this practical?**  
     The custom classifier is trained; the frozen VGG16 feature extractor is not.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 26: Caltech-101 – VGG16 as a Feature Extractor
+
+## 1. Aim
+
+To implement an object classification system using the **pre-trained VGG16 model** as a feature extractor and the Caltech-101 dataset.
+
+The practical performs the following operations:
+
+1. Load the Caltech-101 dataset and select five object categories.
+2. Resize images to 224 × 224 pixels.
+3. Preprocess images according to VGG16 requirements.
+4. Load pre-trained VGG16 without its original classification layers.
+5. Freeze VGG16 layers.
+6. Extract image features using VGG16 and Global Average Pooling.
+7. Train a custom Softmax classifier.
+8. Evaluate the model using test data and display accuracy.
+
+---
+
+# 2. Step-by-Step Code Explanation
+
+## Before Step 1: Install Required Library
+
+```python
+%pip install importlib-resources
+```
+
+- `%pip` installs Python packages directly in the Jupyter Notebook environment.
+- `importlib-resources` provides access to package resources.
+- It may be required by some dependencies.
+
+**Note:** Your code also requires `tensorflow-datasets`. If it is not installed, install it using:
+
+```python
+%pip install tensorflow-datasets
+```
+
+---
+
+## Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+import tensorflow_datasets as tfds
+from tensorflow.keras import layers, Model
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from sklearn.model_selection import train_test_split
+```
+
+| Library / Function | Explanation |
+|---|---|
+| `numpy` | Performs numerical operations and handles arrays. |
+| `tensorflow` | Used for deep learning operations. |
+| `tensorflow_datasets` | Loads ready-made datasets such as Caltech-101. |
+| `layers` | Provides neural network layers. |
+| `Model` | Creates a Keras model using inputs and outputs. |
+| `VGG16` | Loads the pre-trained VGG16 CNN architecture. |
+| `preprocess_input` | Prepares images according to VGG16 preprocessing requirements. |
+| `train_test_split` | Divides data into training and testing sets. |
+
+### Important: What is VGG16?
+
+**VGG16 is a pre-trained Convolutional Neural Network developed by the Visual Geometry Group at Oxford.**
+
+It was trained on the ImageNet dataset, which contains millions of images belonging to 1,000 categories.
+
+- VGG = Visual Geometry Group.
+- 16 = 16 weight layers (13 convolutional layers + 3 fully connected layers in the original architecture).
+
+It is commonly used for image classification and feature extraction.
+
+---
+
+## Step 2: Load the Caltech-101 Dataset
+
+```python
+(ds,), info = tfds.load(
+    "caltech101",
+    split=["train"],
+    as_supervised=True,
+    with_info=True
+)
+```
+
+This loads the Caltech-101 dataset using TensorFlow Datasets.
+
+**Understanding each parameter:**
+
+| Parameter | Explanation |
+|---|---|
+| `"caltech101"` | Name of the dataset. |
+| `split=["train"]` | Loads the training split provided by TFDS. |
+| `as_supervised=True` | Returns images and their corresponding labels as pairs. |
+| `with_info=True` | Also returns dataset information and metadata. |
+
+**What is Caltech-101?**
+
+Caltech-101 is an image dataset containing images belonging to approximately 101 object categories, along with a background category.
+
+Examples include:
+- Airplanes.
+- Ants.
+- Cameras.
+- Chairs.
+- Cars.
+- Dogs.
+
+The images contain different objects, backgrounds, sizes and orientations.
+
+### Understand `ds` and `info`
+
+- `ds` contains the dataset images and labels.
+- `info` contains dataset information, such as class names and label details.
+
+```python
+all_names = info.features["label"].names
+```
+
+- `info.features["label"]` accesses the label information.
+- `.names` retrieves all category names.
+- `all_names` stores the names of the dataset categories.
+
+For example:
+
+```text
+['accordion', 'airplanes', 'anchor', 'ant', ...]
+```
+
+---
+
+## Step 3: Select Five Categories
+
+```python
+selected_names = ["airplanes", "ant", "camera", "cannon", "chair"]
+```
+
+Instead of using all Caltech-101 categories, this practical selects only five categories.
+
+| Class Label | Category |
+|---:|---|
+| 0 | Airplanes |
+| 1 | Ant |
+| 2 | Camera |
+| 3 | Cannon |
+| 4 | Chair |
+
+**Why select only five categories?**
+
+- Reduces computational requirements.
+- Makes training easier.
+- Simplifies the classification problem.
+- Reduces the number of output classes.
+
+### Check whether categories exist
+
+```python
+missing = [name for name in selected_names if name not in all_names]
+if missing:
+    raise ValueError(f"Categories not found: {missing}")
+```
+
+**Explanation:**
+
+- Checks whether all selected categories are available in the dataset.
+- `if name not in all_names` checks whether a category is missing.
+- `missing` stores any category names that are not found.
+- `raise ValueError()` generates an error if any selected category is missing.
+
+**Why is this check useful?**
+
+It prevents the program from continuing with invalid category names.
+
+### Get the original category IDs
+
+```python
+selected_ids = [all_names.index(name) for name in selected_names]
+```
+
+- `all_names.index(name)` finds the original numerical label of a category.
+- `selected_ids` stores the original IDs of the five selected categories.
+
+**Important:** The original category IDs may not be 0, 1, 2, 3 and 4.
+
+For example, the original IDs might be:
+
+```text
+[4, 12, 20, 25, 30]
+```
+
+These are only illustrative values.
+
+---
+
+## Step 4: Select Images, Resize and Assign Labels
+
+```python
+images, labels = [], []
+```
+
+Creates two empty lists:
+
+- `images` stores selected images.
+- `labels` stores their corresponding labels.
+
+### Iterate through the dataset
+
+```python
+for image, label in tfds.as_numpy(ds):
+```
+
+- Iterates through the Caltech-101 dataset.
+- `image` represents an image.
+- `label` represents its original category ID.
+- `tfds.as_numpy()` converts TensorFlow dataset elements into NumPy-compatible values.
+
+```python
+label = int(label)
+```
+
+Converts the label into a normal Python integer.
+
+### Select only the required categories
+
+```python
+if label in selected_ids:
+```
+
+Checks whether the current image belongs to one of the five selected categories.
+
+If the category is selected, the image is processed.
+
+### Resize the image
+
+```python
+images.append(tf.image.resize(image, (224, 224)).numpy())
+```
+
+This line performs two operations.
+
+**1. Resize the image**
+
+```python
+tf.image.resize(image, (224, 224))
+```
+
+- Resizes the image to 224 × 224 pixels.
+- VGG16 expects images of this size in this practical.
+
+**2. Convert and store the image**
+
+```python
+.numpy()
+```
+
+Converts the TensorFlow tensor into a NumPy array.
+
+```python
+images.append(...)
+```
+
+Adds the resized image to the `images` list.
+
+### Assign new labels
+
+```python
+labels.append(selected_ids.index(label))
+```
+
+This converts original dataset labels into new labels from 0 to 4.
+
+For example:
+
+| Category | Original label (illustrative) | New label |
+|---|---:|---:|
+| Airplanes | 4 | 0 |
+| Ant | 12 | 1 |
+| Camera | 20 | 2 |
+| Cannon | 25 | 3 |
+| Chair | 30 | 4 |
+
+**Why do we assign new labels?**
+
+Because the custom classifier has only five output neurons. Therefore, the labels must be numbered from 0 to 4.
+
+---
+
+## Step 5: Convert Images and Labels into NumPy Arrays
+
+```python
+X = np.asarray(images, dtype=np.float32)
+y = np.asarray(labels, dtype=np.int32)
+```
+
+**First line:**
+
+- Converts the image list into a NumPy array.
+- `float32` stores image pixel values as floating-point numbers.
+- `X` contains the selected images.
+
+**Second line:**
+
+- Converts the label list into a NumPy array.
+- `int32` stores labels as integers.
+- `y` contains labels from 0 to 4.
+
+The image array has the general shape:
+
+```text
+(Number of selected images, 224, 224, 3)
+```
+
+The label array has the shape:
+
+```text
+(Number of selected images,)
+```
+
+**Note:** Caltech-101 contains color images, so the resized images are represented with three RGB channels.
+
+---
+
+## Step 6: Split Training and Testing Data
+
+```python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+```
+
+Divides the selected images into training and testing data.
+
+| Parameter | Explanation |
+|---|---|
+| `X` | Input images. |
+| `y` | Corresponding labels. |
+| `test_size=0.2` | Uses 20% data for testing. |
+| `random_state=42` | Makes the split reproducible. |
+| `stratify=y` | Maintains class proportions in both sets. |
+
+**Example:**
+
+If there are 1,000 selected images:
+
+- Training images = 800.
+- Testing images = 200.
+
+These are illustrative numbers; the actual number depends on the selected categories.
+
+### What is `random_state=42`?
+
+It ensures that the same random train-test split is produced whenever the code is executed with the same dataset and settings.
+
+### What is `stratify=y`?
+
+It ensures that all five categories maintain approximately the same proportions in training and testing data.
+
+---
+
+## Step 7: Apply VGG16 Preprocessing
+
+```python
+X_train = preprocess_input(X_train.copy())
+X_test = preprocess_input(X_test.copy())
+```
+
+This is a very important step.
+
+### What is `preprocess_input()`?
+
+It preprocesses images according to the requirements of the pre-trained VGG16 model.
+
+For VGG16:
+
+1. Converts RGB image data into BGR channel order.
+2. Subtracts ImageNet channel mean values.
+3. Does not simply divide pixel values by 255.
+
+**Why is preprocessing necessary?**
+
+VGG16 was trained using a particular image preprocessing method. The input images should follow the same preprocessing method to get meaningful feature extraction.
+
+### What is `.copy()`?
+
+Creates a separate copy of the image array before preprocessing.
+
+This prevents accidental modification of the original array.
+
+**Important viva point:** In this practical, we use VGG16's `preprocess_input()` instead of normalizing images by dividing by 255.
+
+---
+
+## Step 8: Load the Pre-trained VGG16 Model
+
+```python
+vgg = VGG16(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+```
+
+This loads the pre-trained VGG16 architecture.
+
+Let's understand the parameters.
+
+| Parameter | Explanation |
+|---|---|
+| `weights="imagenet"` | Loads weights already learned from ImageNet. |
+| `include_top=False` | Removes the original fully connected classification layers. |
+| `input_shape=(224,224,3)` | Specifies the input image dimensions. |
+
+### What is transfer learning?
+
+Transfer learning is a technique in which knowledge learned by a model on one dataset is reused for another related task.
+
+In this practical:
+
+- VGG16 was originally trained on ImageNet.
+- We reuse its learned image features.
+- We train a new classifier for five Caltech-101 categories.
+
+### What does `include_top=False` mean?
+
+The original VGG16 model contains fully connected classification layers at the end.
+
+By setting `include_top=False`, we remove those original classification layers and retain the convolutional feature-extraction part.
+
+This allows us to add our own classifier.
+
+### Freeze the VGG16 layers
+
+```python
+vgg.trainable = False
+```
+
+This freezes all VGG16 layers.
+
+**What does freezing mean?**
+
+Freezing means the weights of VGG16 are not updated during training.
+
+- Pre-trained weights remain unchanged.
+- The model acts as a fixed feature extractor.
+- Only our custom classifier is trained.
+
+**Why freeze VGG16?**
+
+1. Saves training time.
+2. Reduces computational requirements.
+3. Preserves previously learned features.
+4. Prevents unnecessary changes to pre-trained weights.
+
+---
+
+## Step 9: Extract Features Using VGG16 and Global Average Pooling
+
+```python
+inputs = layers.Input(shape=(224, 224, 3))
+```
+
+Creates an input layer that accepts images of size 224 × 224 with three color channels.
+
+```python
+features = layers.GlobalAveragePooling2D()(vgg(inputs, training=False))
+```
+
+This is one of the most important lines in the practical.
+
+Let's break it into two parts.
+
+### Part 1: VGG16 feature extraction
+
+```python
+vgg(inputs, training=False)
+```
+
+- Passes input images through the pre-trained VGG16 model.
+- Extracts useful visual features.
+- `training=False` ensures VGG16 is used in inference mode.
+
+**What features does VGG16 extract?**
+
+Earlier convolutional layers learn simple features such as:
+- Edges.
+- Lines.
+- Corners.
+
+Deeper convolutional layers learn more complex features such as:
+- Shapes.
+- Textures.
+- Object parts.
+- Patterns.
+
+### Part 2: Global Average Pooling
+
+```python
+layers.GlobalAveragePooling2D()
+```
+
+Global Average Pooling converts each feature map into a single average value.
+
+For example, suppose the VGG16 convolutional output has this shape:
+
+```text
+7 × 7 × 512
+```
+
+Global Average Pooling converts it into:
+
+```text
+512
+```
+
+Each of the 512 feature maps becomes one average value.
+
+**Why do we use GlobalAveragePooling2D?**
+
+1. Reduces the number of features.
+2. Reduces the number of parameters.
+3. Converts feature maps into a one-dimensional feature vector.
+4. Makes the output suitable for a Dense classification layer.
+
+### Create the feature extractor model
+
+```python
+feature_extractor = Model(inputs, features)
+```
+
+Creates a separate model using:
+
+- `inputs`: Input images.
+- `features`: Extracted feature vectors.
+
+This model uses VGG16 to extract features from images.
+
+### Extract training features
+
+```python
+train_features = feature_extractor.predict(X_train, batch_size=16)
+```
+
+- Passes training images through the feature extractor.
+- Extracts feature vectors.
+- `batch_size=16` processes 16 images at a time.
+- Stores the extracted features in `train_features`.
+
+### Extract testing features
+
+```python
+test_features = feature_extractor.predict(X_test, batch_size=16)
+```
+
+- Passes testing images through the same feature extractor.
+- Extracts testing feature vectors.
+- Stores them in `test_features`.
+
+**Important difference:**
+
+| Variable | Meaning |
+|---|---|
+| `X_train` | Original training images |
+| `X_test` | Original testing images |
+| `train_features` | Features extracted from training images |
+| `test_features` | Features extracted from testing images |
+
+For VGG16 with Global Average Pooling, each image produces a feature vector of **512 values**.
+
+---
+
+## Step 10: Build the Custom Softmax Classifier
+
+```python
+classifier = tf.keras.Sequential([
+    layers.Input(shape=(train_features.shape[1],)),
+    layers.Dense(len(selected_names), activation="softmax")
+])
+```
+
+This creates a new classification model.
+
+### Input layer
+
+```python
+layers.Input(shape=(train_features.shape[1],))
+```
+
+- Accepts extracted feature vectors.
+- `train_features.shape[1]` is 512.
+- Therefore, the classifier accepts 512 input features.
+
+### Dense output layer
+
+```python
+layers.Dense(len(selected_names), activation="softmax")
+```
+
+- Creates a Dense layer.
+- `len(selected_names)` equals 5.
+- Therefore, there are five output neurons.
+- Each neuron represents one selected object category.
+- Softmax generates probabilities for all five categories.
+
+**Why Softmax?**
+
+Softmax converts output values into probabilities.
+
+The category with the highest probability is selected as the predicted category.
+
+For example:
+
+| Category | Predicted probability |
+|---|---:|
+| Airplanes | 0.05 |
+| Ant | 0.10 |
+| Camera | 0.75 |
+| Cannon | 0.05 |
+| Chair | 0.05 |
+
+The predicted category is Camera because it has the highest probability.
+
+---
+
+## Step 11: Compile the Custom Classifier
+
+```python
+classifier.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates classifier weights to reduce errors. |
+| `loss="sparse_categorical_crossentropy"` | Calculates classification error for integer labels. |
+| `metrics=["accuracy"]` | Measures classification accuracy. |
+
+**Why sparse categorical crossentropy?**
+
+Because the five category labels are represented as integer values from 0 to 4.
+
+---
+
+## Step 12: Train the Custom Classifier
+
+```python
+classifier.fit(train_features, y_train, epochs=15, batch_size=32)
+```
+
+This trains the custom Dense classifier using the features extracted by VGG16.
+
+| Parameter | Explanation |
+|---|---|
+| `train_features` | Extracted training image features. |
+| `y_train` | Actual training labels. |
+| `epochs=15` | Trains the classifier for 15 epochs. |
+| `batch_size=32` | Processes 32 feature vectors per batch. |
+
+**Important concept:**
+
+We are not training the entire VGG16 model.
+
+- VGG16 remains frozen.
+- VGG16 extracts image features.
+- Only the custom Softmax classifier learns the five categories.
+
+This is called **feature extraction using transfer learning**.
+
+---
+
+## Step 13: Evaluate the Classifier
+
+```python
+_, test_accuracy = classifier.evaluate(test_features, y_test, verbose=0)
+```
+
+- `classifier.evaluate()` evaluates the trained classifier.
+- `test_features` contains features extracted from test images.
+- `y_test` contains actual test labels.
+- It returns loss and accuracy.
+- `_` ignores the loss.
+- `test_accuracy` stores the testing accuracy.
+- `verbose=0` hides evaluation progress.
+
+### Display accuracy
+
+```python
+print(f"Test accuracy: {test_accuracy * 100:.2f}%")
+```
+
+- Multiplies accuracy by 100 to convert it into a percentage.
+- `.2f` displays two decimal places.
+
+Your output:
+
+```text
+Test accuracy: 86.67%
+```
+
+---
+
+# 3. Understanding the Output
+
+Your model achieved:
+
+**Test Accuracy = 86.67%**
+
+This means the classifier correctly predicts approximately 86.67% of the testing images.
+
+For example, if the test dataset contains 300 images:
+
+- Correct predictions ≈ 260.
+- Incorrect predictions ≈ 40.
+
+These are approximate values based on the displayed accuracy.
+
+### Why is VGG16 useful?
+
+VGG16 has already learned many visual features from ImageNet.
+
+Instead of training a CNN from scratch:
+1. We reuse its pre-trained knowledge.
+2. Extract useful features from Caltech-101 images.
+3. Train only a small classifier.
+4. Evaluate the classifier on test images.
+
+This saves time and computational resources.
+
+---
+
+# 4. Important Viva Questions and Answers
+
+### Q1. What is the aim of this practical?
+To implement object classification using pre-trained VGG16 as a feature extractor with the Caltech-101 dataset.
+
+### Q2. What is Caltech-101?
+Caltech-101 is an image dataset containing approximately 101 object categories and a background category.
+
+### Q3. What is VGG16?
+VGG16 is a pre-trained Convolutional Neural Network developed by the Visual Geometry Group at Oxford.
+
+### Q4. What is the full form of VGG?
+Visual Geometry Group.
+
+### Q5. Why is it called VGG16?
+Because the original architecture has 16 weight layers: 13 convolutional layers and 3 fully connected layers.
+
+### Q6. What is ImageNet?
+ImageNet is a large image dataset containing millions of images belonging to 1,000 categories used for image recognition research.
+
+### Q7. What is transfer learning?
+Transfer learning is a technique in which knowledge learned by a model on one dataset is reused for another task.
+
+### Q8. What is feature extraction?
+Feature extraction is the process of obtaining important information or patterns from images using a pre-trained model.
+
+### Q9. Why do we use VGG16 as a feature extractor?
+Because VGG16 has already learned useful image features from ImageNet, reducing the need to train a CNN from scratch.
+
+### Q10. What is `include_top=False`?
+It removes the original fully connected classification layers of VGG16 and retains its convolutional feature-extraction layers.
+
+### Q11. What is freezing?
+Freezing means keeping the pre-trained model weights unchanged during training.
+
+### Q12. Why do we freeze VGG16?
+To preserve pre-trained features and reduce training time and computational requirements.
+
+### Q13. What is `weights="imagenet"`?
+It loads the weights learned by VGG16 during training on ImageNet.
+
+### Q14. Why do we resize images to 224 × 224?
+Because this is the input image size used by the VGG16 architecture in this practical.
+
+### Q15. What is `preprocess_input()`?
+It prepares images according to the preprocessing requirements of VGG16, including RGB-to-BGR conversion and channel mean subtraction.
+
+### Q16. Why do we use `GlobalAveragePooling2D()`?
+It converts each feature map into a single average value and reduces the feature dimensions.
+
+### Q17. What is the output of Global Average Pooling in this practical?
+A feature vector containing 512 values per image.
+
+### Q18. What is the purpose of the custom Dense layer?
+It classifies the extracted VGG16 features into the five selected categories.
+
+### Q19. Why are there five output neurons?
+Because we selected five object categories.
+
+### Q20. Why do we use Softmax?
+Softmax converts output values into probabilities for the five categories.
+
+### Q21. What is the difference between VGG16 and the custom classifier?
+- VGG16 extracts image features.
+- The custom classifier uses those features to predict the object category.
+
+### Q22. Are we training VGG16 in this practical?
+No. VGG16 is frozen. Only the custom classifier is trained.
+
+### Q23. What is the purpose of `feature_extractor.predict()`?
+It extracts feature vectors from training and testing images using VGG16.
+
+### Q24. What does `train_features` contain?
+It contains the feature vectors extracted from training images.
+
+### Q25. What does `test_features` contain?
+It contains the feature vectors extracted from testing images.
+
+### Q26. Why do we use `stratify=y`?
+To maintain approximately the same proportion of each category in training and testing datasets.
+
+### Q27. Which optimizer is used?
+Adam optimizer.
+
+### Q28. Which loss function is used?
+Sparse categorical crossentropy.
+
+### Q29. What is batch size?
+The number of samples processed before the model updates its weights.
+
+### Q30. What is an epoch?
+One complete pass through the training dataset.
+
+### Q31. What is the accuracy achieved in this practical?
+86.67% testing accuracy.
+
+### Q32. What is the difference between feature extraction and fine-tuning?
+- Feature extraction freezes the pre-trained model and trains a new classifier.
+- Fine-tuning unfreezes some pre-trained layers and trains them further on the new dataset.
+
+### Q33. What are the advantages of transfer learning?
+1. Reduces training time.
+2. Requires less training data.
+3. Reuses learned features.
+4. Reduces computational requirements.
+5. Can improve classification performance.
+
+### Q34. What is the difference between CNN and VGG16?
+CNN is a general type of neural network architecture, whereas VGG16 is a specific CNN architecture.
+
+### Q35. What is the difference between training and testing data?
+- Training data is used to train the classifier.
+- Testing data is used to evaluate its performance on unseen images.
+
+---
+
+# 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Dataset | Caltech-101 |
+| Model | VGG16 |
+| Technique | Transfer Learning |
+| Pre-trained weights | ImageNet |
+| Selected categories | 5 |
+| Categories | Airplanes, Ant, Camera, Cannon, Chair |
+| Image size | 224 × 224 |
+| Image channels | 3 (RGB) |
+| Original classifier | Removed |
+| `include_top` | False |
+| VGG16 trainable | False |
+| Preprocessing | `preprocess_input()` |
+| Feature extraction | VGG16 |
+| Pooling | GlobalAveragePooling2D |
+| Features per image | 512 |
+| Custom classifier | Dense |
+| Output neurons | 5 |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 32 |
+| Train-test split | 80:20 |
+| Testing accuracy | 86.67% |
+
+---
+
+# 6. Short Explanation to Tell the External Examiner
+
+"I have implemented an object classification system using VGG16 as a feature extractor with the Caltech-101 dataset.
+
+First, I loaded the Caltech-101 dataset using TensorFlow Datasets and selected five categories: Airplanes, Ant, Camera, Cannon and Chair.
+
+Then, I resized all images to 224 × 224 pixels and applied VGG16 preprocessing.
+
+After that, I loaded the pre-trained VGG16 model with ImageNet weights and set `include_top=False` to remove its original classification layers. I froze all VGG16 layers so that their weights would not change.
+
+Next, I used VGG16 to extract image features and applied Global Average Pooling to convert feature maps into 512-dimensional feature vectors.
+
+Then, I created a custom Dense classification layer with five output neurons and Softmax activation.
+
+I trained the classifier using the extracted training features for 15 epochs with the Adam optimizer and sparse categorical crossentropy loss function.
+
+Finally, I evaluated the classifier using testing features and achieved **86.67% testing accuracy**."
+
+---
+
+# 7. Final Verdict – Code Checking
+
+**Your Chit 26 code is correct and covers all the requirements in the practical question.**
+
+| Requirement | Verdict |
+|---|---|
+| Load Caltech-101 dataset | Correct |
+| Select five categories | Correct |
+| Resize images to 224 × 224 | Correct |
+| Apply VGG16 preprocessing | Correct |
+| Load pre-trained VGG16 | Correct |
+| Remove original classification layers | Correct |
+| Freeze VGG16 layers | Correct |
+| Extract image features | Correct |
+| Apply Global Average Pooling | Correct |
+| Add custom Dense Softmax classifier | Correct |
+| Train custom classifier | Correct |
+| Evaluate using test features | Correct |
+| Display classification accuracy | Correct |
+
+### Important points to remember
+
+1. **VGG16** is a pre-trained CNN.
+2. **ImageNet** provides the pre-trained weights.
+3. `include_top=False` removes the original classification layers.
+4. `vgg.trainable=False` freezes VGG16.
+5. `preprocess_input()` performs VGG16-specific preprocessing.
+6. `GlobalAveragePooling2D()` converts feature maps into 512 features.
+7. The custom classifier has five output neurons because five categories are selected.
+8. Only the custom classifier is trained.
+9. Testing accuracy is **86.67%**.
+
+**Most important viva topics:** VGG16, transfer learning, feature extraction, ImageNet, freezing, `include_top=False`, `preprocess_input()`, Global Average Pooling and fine-tuning.

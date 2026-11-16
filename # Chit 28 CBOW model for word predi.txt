@@ -475,6 +475,14 @@ The loss is not zero, which means the model still makes prediction errors. Becau
 
 
 
+
+
+
+
+
+
+
+
 # Chit 28: CBOW Model for Word Prediction
 **Subject:** Deep Learning | SPPU 2019 Pattern | B.E. IT
 

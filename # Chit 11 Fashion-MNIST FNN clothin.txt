@@ -397,3 +397,646 @@ All five displayed predictions match their actual labels. This shows only five e
 
 20. **Do five correct displayed examples prove the model is perfect?**  
     No. They show only five predictions. Full evaluation is needed to measure performance over the test set.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 11: Fashion-MNIST FNN – Clothing Predictions
+
+## 1. Aim of the Practical
+
+To implement a **Feedforward Neural Network (FNN)** using TensorFlow/Keras to classify different clothing items from the Fashion-MNIST dataset and display the actual and predicted class labels for five test images.
+
+In simple words:
+- The model is trained using images of different clothing items.
+- It learns to identify different types of clothes.
+- It predicts the clothing category of test images.
+- Finally, it displays five images with their actual and predicted labels.
+
+---
+
+## 2. Explanation of the Code Step-by-Step
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import matplotlib.pyplot as plt
+```
+
+| Code | Explanation |
+|---|---|
+| `import numpy as np` | Imports NumPy for numerical operations and array handling. |
+| `import tensorflow as tf` | Imports TensorFlow, which is used to build and train deep learning models. |
+| `Sequential` | Creates a neural network where layers are arranged one after another. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates a fully connected neural network layer. |
+| `matplotlib.pyplot` | Used to display images and graphs. |
+
+**What is a Dense layer?**
+
+A Dense layer is a fully connected layer in which every neuron is connected to all neurons in the previous layer.
+
+### Step 2: Load and Prepare Fashion-MNIST
+
+```python
+from tensorflow.keras.datasets import fashion_mnist
+
+(X_train, y_train), (X_test, y_test) = fashion_mnist.load_data()
+```
+
+**What is Fashion-MNIST?**
+
+Fashion-MNIST is a dataset containing grayscale images of clothing items. It is commonly used to train and test image classification models.
+
+It contains:
+- 60,000 training images.
+- 10,000 testing images.
+- Each image is of size 28 × 28 pixels.
+- 10 different clothing categories.
+
+**Explanation:**
+
+- `fashion_mnist`: Loads the Fashion-MNIST dataset.
+- `load_data()`: Downloads and loads the dataset.
+- `X_train`: Contains training images.
+- `y_train`: Contains actual labels of training images.
+- `X_test`: Contains testing images.
+- `y_test`: Contains actual labels of testing images.
+
+#### Normalize the Images
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `astype("float32")`: Converts pixel values into floating-point numbers.
+- `/255.0`: Divides pixel values by 255.
+
+Original pixel values range from **0 to 255**.
+
+After normalization, values range from **0 to 1**.
+
+**Why is normalization required?**
+
+It helps the neural network learn faster and improves training stability.
+
+#### Define Class Names
+
+```python
+class_names = ["T-shirt/top", "Trouser", "Pullover", "Dress", "Coat",
+               "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"]
+```
+
+This list contains the names of all 10 clothing categories.
+
+| Label | Clothing Item |
+|---|---|
+| 0 | T-shirt/top |
+| 1 | Trouser |
+| 2 | Pullover |
+| 3 | Dress |
+| 4 | Coat |
+| 5 | Sandal |
+| 6 | Shirt |
+| 7 | Sneaker |
+| 8 | Bag |
+| 9 | Ankle boot |
+
+For example, if the predicted label is `7`, the corresponding clothing item is `Sneaker`.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+This defines the image dimensions:
+- 28 = Image height.
+- 28 = Image width.
+- 1 = One grayscale channel.
+
+### Step 3: Flatten the Images
+
+```python
+X_train = X_train.reshape(len(X_train), 784)
+X_test = X_test.reshape(len(X_test), 784)
+```
+
+**What is Flattening?**
+
+Flattening means converting a 2D image into a 1D array.
+
+Each image has dimensions:
+
+28 × 28 = 784 pixels.
+
+Therefore, each image is converted into an array containing 784 values.
+
+**Why is flattening required?**
+
+An FNN with Dense layers expects one-dimensional input rather than a two-dimensional image.
+
+- Before flattening: `(28, 28)`
+- After flattening: `(784,)`
+
+### Step 4: Build the Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+**1. Number of classes**
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the number of clothing categories.
+
+Here, the number of classes is **10**.
+
+**2. Sequential Model**
+
+```python
+model = Sequential([
+```
+
+Creates a neural network in which data flows from one layer to the next.
+
+**3. Input Layer**
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size.
+- `X_train.shape[1]` represents 784 input features.
+- Each image contains 784 pixel values.
+
+**4. First Hidden Layer**
+
+```python
+Dense(256, activation="relu")
+```
+
+- Contains 256 neurons.
+- Uses ReLU activation.
+- Learns basic patterns from image pixels.
+
+**5. Second Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns more complex patterns and features.
+
+**6. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons, one for each clothing category.
+- Uses Softmax activation.
+- Produces probability scores for all 10 classes.
+- The class with the highest probability is selected as the prediction.
+
+**What is ReLU?**
+
+ReLU stands for Rectified Linear Unit.
+
+It converts negative values into zero and keeps positive values unchanged.
+
+Formula:
+
+`f(x) = max(0, x)`
+
+**What is Softmax?**
+
+Softmax converts the output values into probabilities.
+
+The class with the highest probability is selected as the final prediction.
+
+### FNN Architecture Diagram
+
+```text
+       Input Image
+        28 × 28
+           |
+           v
+     Flatten Layer
+       784 Pixels
+           |
+           v
+    Hidden Layer 1
+      256 Neurons
+       ReLU
+           |
+           v
+    Hidden Layer 2
+      128 Neurons
+       ReLU
+           |
+           v
+      Output Layer
+       10 Neurons
+       Softmax
+           |
+           v
+   Predicted Clothing
+        Category
+```
+
+### Step 5: Compile the Model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce errors during training. |
+| `loss="sparse_categorical_crossentropy"` | Measures prediction error for multi-class classification when labels are integers. |
+| `metrics=["accuracy"]` | Measures how many predictions are correct. |
+
+**What is an Optimizer?**
+
+An optimizer updates the weights and biases of a neural network to minimize the loss.
+
+**What is Loss?**
+
+Loss measures the difference between actual output and predicted output.
+
+**What is Accuracy?**
+
+Accuracy measures the percentage of correctly classified images.
+
+### Step 6: Train the Model
+
+```python
+model.fit(X_train, y_train, epochs=15, batch_size=128, verbose=0)
+```
+
+This trains the neural network using training images and their actual labels.
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual labels of training images. |
+| `epochs=15` | Model processes the complete training dataset 15 times. |
+| `batch_size=128` | Processes 128 images before updating the weights. |
+| `verbose=0` | Hides training progress output. |
+
+**What is an Epoch?**
+
+One complete pass through the entire training dataset is called an epoch.
+
+**What is Batch Size?**
+
+The number of training samples processed together before updating the model weights.
+
+### Step 7: Predict Test Images
+
+```python
+y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
+```
+
+This step predicts the clothing categories of test images.
+
+Let's understand it:
+
+**1. `model.predict(X_test, verbose=0)`**
+
+- Uses the trained model to predict the test images.
+- Returns probability scores for all 10 clothing categories.
+
+**2. `np.argmax()`**
+
+- Finds the index of the highest probability.
+- Selects the class with the highest probability.
+
+**3. `axis=1`**
+
+Performs the operation row-wise for each test image.
+
+**4. `y_pred`**
+
+Stores the predicted class labels.
+
+Example:
+
+Suppose the model produces:
+
+| Clothing Category | Probability |
+|---|---:|
+| T-shirt | 0.05 |
+| Trouser | 0.02 |
+| Pullover | 0.10 |
+| Dress | 0.03 |
+| Coat | 0.05 |
+| Sandal | 0.02 |
+| Shirt | 0.08 |
+| Sneaker | 0.60 |
+| Bag | 0.03 |
+| Ankle boot | 0.02 |
+
+The highest probability is `0.60`, so the predicted class is **Sneaker (7)**.
+
+### Step 8: Display Five Examples
+
+```python
+plt.figure(figsize=(14, 4))
+```
+
+Creates a figure of width 14 and height 4 for displaying images.
+
+```python
+for i in range(5):
+```
+
+Repeats the following operations five times to display five test images.
+
+```python
+image = X_test[i].reshape(image_shape)
+```
+
+- Selects the `i-th` test image.
+- Reshapes its 784 values back into 28 × 28 × 1 format.
+
+```python
+plt.subplot(1, 5, i + 1)
+```
+
+Divides the figure into one row and five columns.
+
+`i + 1` specifies the position of each image.
+
+```python
+if image_shape[-1] == 1:
+    plt.imshow(image.squeeze(), cmap="gray")
+else:
+    plt.imshow(image)
+```
+
+- Checks whether the image has one channel.
+- `image.squeeze()` removes the extra channel dimension.
+- `cmap="gray"` displays the image in grayscale.
+- `plt.imshow()` displays the image.
+
+```python
+plt.title(f"Actual: {class_names[int(y_test[i])]}
+Predicted: {class_names[int(y_pred[i])]}")
+```
+
+Displays two labels above each image:
+
+- **Actual:** Correct clothing category from the dataset.
+- **Predicted:** Clothing category predicted by the model.
+
+```python
+plt.axis("off")
+```
+
+Hides the X-axis and Y-axis.
+
+```python
+plt.tight_layout()
+```
+
+Adjusts spacing so that images and titles do not overlap.
+
+```python
+plt.show()
+```
+
+Displays the final five images with their actual and predicted labels.
+
+---
+
+## 3. Understanding the Final Output
+
+The output displays five Fashion-MNIST test images.
+
+Each image contains:
+- Actual clothing category.
+- Predicted clothing category.
+
+Example of output interpretation:
+
+| Image | Actual Label | Predicted Label | Result |
+|---|---|---|---|
+| 1 | Sneaker | Sneaker | Correct |
+| 2 | Trouser | Trouser | Correct |
+| 3 | Shirt | T-shirt/top | Incorrect |
+| 4 | Bag | Bag | Correct |
+| 5 | Ankle boot | Ankle boot | Correct |
+
+*This is an illustrative example, not your actual execution output.*
+
+If actual and predicted labels are the same, the prediction is correct. Otherwise, the prediction is incorrect.
+
+---
+
+# 4. Important External Viva Questions and Answers
+
+### Q1. What is Fashion-MNIST?
+Fashion-MNIST is a dataset containing grayscale images of different clothing items used for image classification.
+
+### Q2. How many images are present in Fashion-MNIST?
+It contains:
+- 60,000 training images.
+- 10,000 testing images.
+
+### Q3. How many classes are present in Fashion-MNIST?
+There are 10 clothing categories.
+
+### Q4. Name the 10 classes of Fashion-MNIST.
+1. T-shirt/top
+2. Trouser
+3. Pullover
+4. Dress
+5. Coat
+6. Sandal
+7. Shirt
+8. Sneaker
+9. Bag
+10. Ankle boot
+
+### Q5. What is the size of each image?
+Each image is 28 × 28 pixels.
+
+### Q6. What is an FNN?
+FNN stands for Feedforward Neural Network. Information flows from the input layer through hidden layers to the output layer in one direction.
+
+### Q7. Why is it called a Feedforward Neural Network?
+Because information moves only in the forward direction, from input to output, without forming feedback loops.
+
+### Q8. Which layers are used in this model?
+- Input layer.
+- Two hidden Dense layers.
+- Output Dense layer.
+
+### Q9. How many neurons are present in the hidden layers?
+- First hidden layer: 256 neurons.
+- Second hidden layer: 128 neurons.
+
+### Q10. How many neurons are present in the output layer?
+10 neurons because there are 10 clothing categories.
+
+### Q11. Why is flattening required?
+Flattening converts a 28 × 28 image into a one-dimensional array of 784 values, which can be given to Dense layers.
+
+### Q12. Why do we normalize images?
+Normalization converts pixel values from 0–255 into 0–1, helping the model train more efficiently.
+
+### Q13. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+### Q14. What is Softmax?
+Softmax converts output values into probabilities for different classes. The class with the highest probability is selected.
+
+### Q15. Why is Softmax used in the output layer?
+Because this is a multi-class classification problem, and Softmax helps select one class from 10 categories.
+
+### Q16. What is the Adam optimizer?
+Adam is an optimization algorithm that updates model weights to reduce prediction errors.
+
+### Q17. What is an Epoch?
+One complete pass through the entire training dataset.
+
+### Q18. What is Batch Size?
+The number of training samples processed together before updating the model weights.
+
+### Q19. What is the purpose of `model.fit()`?
+It trains the neural network using training data.
+
+### Q20. What is the purpose of `model.predict()`?
+It predicts the output or class probabilities for new input data.
+
+### Q21. What is the purpose of `np.argmax()`?
+It returns the index of the maximum value, helping us select the predicted class.
+
+### Q22. What is the difference between training and testing data?
+- Training data is used to teach the model.
+- Testing data is used to evaluate the trained model on unseen images.
+
+### Q23. What is the difference between FNN and CNN?
+- FNN uses flattened input and Dense layers.
+- CNN uses convolutional and pooling layers to extract image features automatically.
+
+### Q24. Why is `verbose=0` used?
+It hides the training or prediction progress output.
+
+### Q25. What is the purpose of `plt.imshow()`?
+It displays an image.
+
+### Q26. Why do we use `plt.axis("off")`?
+To hide the axes and display only the image.
+
+### Q27. What is the difference between actual and predicted labels?
+- Actual label is the correct category given in the dataset.
+- Predicted label is the category identified by the trained model.
+
+### Q28. Why do we use `sparse_categorical_crossentropy`?
+Because this model performs multi-class classification and the target labels are stored as integer values from 0 to 9.
+
+---
+
+## 5. Important Differences to Remember
+
+| FNN | CNN |
+|---|---|
+| Feedforward Neural Network | Convolutional Neural Network |
+| Uses Dense layers | Uses Convolutional and Dense layers |
+| Requires flattening of images | Can process images in 2D form |
+| Learns patterns from flattened pixel values | Extracts spatial features such as edges and shapes |
+| Usually less effective for image classification | Usually more effective for image classification |
+
+## 6. Quick Revision Before Viva
+
+| Topic | Answer |
+|---|---|
+| Practical | Fashion-MNIST clothing classification |
+| Model | FNN |
+| Dataset | Fashion-MNIST |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 |
+| Pixel values | 0–255 |
+| Normalized values | 0–1 |
+| Input features | 784 |
+| Number of classes | 10 |
+| Hidden layers | 2 |
+| First hidden layer | 256 neurons |
+| Second hidden layer | 128 neurons |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Prediction | `model.predict()` |
+| Highest probability | `np.argmax()` |
+| Display library | Matplotlib |
+
+## 7. Explain This Practical to the External Examiner
+
+You can memorize this short explanation:
+
+"This practical implements a Feedforward Neural Network to classify clothing items using the Fashion-MNIST dataset. First, we load the dataset, which contains 60,000 training images and 10,000 testing images. Each image is 28 × 28 pixels. We normalize the pixel values between 0 and 1 and flatten each image into 784 values. Then we create an FNN using two hidden Dense layers containing 256 and 128 neurons with ReLU activation. The output layer contains 10 neurons with Softmax activation because there are 10 clothing categories. We compile the model using the Adam optimizer and sparse categorical crossentropy loss. Then we train it for 15 epochs with a batch size of 128. Finally, we predict the clothing categories of test images and display five images with their actual and predicted labels."
+
+**Final verdict:** Your code is correct for Chit 11. It implements the required FNN, uses Fashion-MNIST, predicts test labels, and displays five test images with actual and predicted clothing categories.

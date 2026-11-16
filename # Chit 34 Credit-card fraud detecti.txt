@@ -459,3 +459,1014 @@ The overall accuracy is about 95%, but that number can be misleading because alm
 
 20. **Does this code constitute a production fraud-detection system?**  
     No. It is an educational demonstration; the threshold and model would need careful validation before practical use.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 34: Credit-Card Fraud Detection Using an Autoencoder
+
+## 1. Aim
+
+To develop an **Autoencoder-based anomaly detection model** to identify potentially fraudulent credit-card transactions.
+
+The model is trained using only normal transactions. It learns the patterns of normal transactions and identifies unusual transactions by calculating reconstruction errors.
+
+---
+
+# 2. What is an Autoencoder?
+
+An **Autoencoder** is a type of Artificial Neural Network (ANN) that learns to reproduce its input at the output.
+
+It has two main parts:
+
+1. **Encoder:** Compresses the input data into a smaller representation.
+2. **Decoder:** Reconstructs the original input from the compressed representation.
+
+### Simple example
+
+Suppose we give transaction data to an Autoencoder.
+
+- Normal transaction → The model learns to reconstruct it properly.
+- Fraudulent transaction → The model may find it difficult to reconstruct it because it has unusual patterns.
+
+Therefore, fraudulent transactions generally produce higher reconstruction errors.
+
+### Autoencoder architecture
+
+```text
+       Input Transaction Features
+                 |
+                 v
+          ENCODER
+          Dense(16)
+                 |
+                 v
+          Dense(8)
+                 |
+                 v
+       Latent Representation
+          (Compressed Data)
+                 |
+                 v
+          DECODER
+          Dense(16)
+                 |
+                 v
+       Dense(30) - Output
+                 |
+                 v
+       Reconstructed Transaction
+                 |
+                 v
+       Calculate Reconstruction Error
+                 |
+                 v
+         Compare with Threshold
+                 |
+          ┌──────┴──────┐
+          |             |
+       Error <=       Error >
+       Threshold      Threshold
+          |             |
+          v             v
+        Normal        Fraud
+```
+
+**Remember:** Low reconstruction error generally indicates a normal transaction, while high reconstruction error indicates a potentially fraudulent transaction.
+
+---
+
+# 3. Step-by-Step Code Explanation
+
+## Step 1: Import Libraries and Load Dataset
+
+### A. Import libraries
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix, classification_report
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+```
+
+| Library / Function | Purpose |
+|---|---|
+| NumPy | Performs mathematical and numerical operations. |
+| Pandas | Loads and handles the dataset. |
+| Matplotlib | Displays graphs. |
+| `train_test_split` | Splits the dataset into training and testing data. |
+| `StandardScaler` | Normalizes the transaction features. |
+| `confusion_matrix` | Evaluates classification results. |
+| `classification_report` | Displays precision, recall, F1-score and accuracy. |
+| `Sequential` | Creates the neural network model. |
+| `Input` | Defines the input shape. |
+| `Dense` | Creates fully connected neural network layers. |
+
+### B. Load the dataset
+
+```python
+data = pd.read_csv("creditcard.csv")
+```
+
+- `pd.read_csv()` reads the CSV dataset.
+- `creditcard.csv` is the credit-card transaction dataset.
+- The dataset is stored in the variable `data`.
+
+**Dataset information:**
+
+Your output shows:
+
+```text
+Rows and input columns: (284807, 30)
+```
+
+This means:
+- Total transactions = 284,807.
+- Input features = 30.
+
+The original dataset has 31 columns:
+- 30 transaction-related features.
+- 1 target column called `Class`.
+
+### C. Separate input features and labels
+
+```python
+X = data.drop(columns="Class").to_numpy(dtype="float32")
+```
+
+- `drop(columns="Class")` removes the Class column.
+- The remaining 30 columns are input features.
+- `to_numpy()` converts the data into a NumPy array.
+- `float32` stores the values as 32-bit floating-point numbers.
+
+```python
+y = data["Class"].to_numpy(dtype="int32")
+```
+
+Extracts the Class column and stores it as integer labels.
+
+**Class labels:**
+
+| Class | Meaning |
+|---|---|
+| 0 | Normal transaction |
+| 1 | Fraudulent transaction |
+
+### D. Display transaction counts
+
+```python
+print("Rows and input columns:", X.shape)
+print("Normal transactions:", int((y == 0).sum()))
+print("Fraudulent transactions:", int((y == 1).sum()))
+```
+
+Explanation:
+
+- `X.shape` displays the number of rows and features.
+- `y == 0` selects normal transactions.
+- `y == 1` selects fraudulent transactions.
+- `.sum()` counts the selected transactions.
+- `int()` converts the result into an integer.
+
+**Your output:**
+
+```text
+Rows and input columns: (284807, 30)
+Normal transactions: 284315
+Fraudulent transactions: 492
+```
+
+This dataset is highly imbalanced because normal transactions are much higher than fraudulent transactions.
+
+---
+
+## Step 2: Split and Scale the Data
+
+### A. Split the dataset
+
+```python
+X_train_all, X_test_raw, y_train_all, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+```
+
+This divides the dataset into training and testing data.
+
+| Parameter | Meaning |
+|---|---|
+| `X` | Input transaction features. |
+| `y` | Actual class labels. |
+| `test_size=0.2` | Uses 20% data for testing. |
+| `random_state=42` | Makes the split reproducible. |
+| `stratify=y` | Maintains the normal/fraud class proportions in both sets. |
+
+Therefore:
+- 80% data → Training portion.
+- 20% data → Testing portion.
+
+**Important:** `X_train_all` contains both normal and fraudulent transactions initially.
+
+### B. Select only normal transactions
+
+```python
+X_normal = X_train_all[y_train_all == 0]
+```
+
+This is a very important line.
+
+- `y_train_all == 0` selects only normal transactions.
+- Fraudulent transactions are excluded.
+- Only normal transactions are used to train the Autoencoder.
+
+**Why?**
+
+The Autoencoder must learn the patterns of normal transactions. When it receives an unusual transaction, it may reconstruct it poorly and produce a higher reconstruction error.
+
+### C. Divide normal data into training and validation sets
+
+```python
+X_train, X_val = train_test_split(
+    X_normal, test_size=0.1, random_state=42
+)
+```
+
+- 90% → Training data.
+- 10% → Validation data.
+- Both contain only normal transactions.
+
+**Why validation data?**
+
+Validation data helps monitor how well the model reconstructs normal transactions that were not used to update its weights.
+
+### D. Normalize the data
+
+```python
+scaler = StandardScaler()
+```
+
+Creates a StandardScaler object.
+
+StandardScaler standardizes the features so that they have approximately:
+
+- Mean = 0
+- Standard deviation = 1
+
+The formula is:
+
+\[
+Z = \frac{X-\mu}{\sigma}
+\]
+
+Where:
+
+- \(X\) = Original value.
+- \(\mu\) = Mean.
+- \(\sigma\) = Standard deviation.
+
+### Fit and transform training data
+
+```python
+X_train = scaler.fit_transform(X_train)
+```
+
+- `fit()` calculates the mean and standard deviation from training data.
+- `transform()` standardizes the training data.
+- `fit_transform()` performs both operations.
+
+### Transform validation data
+
+```python
+X_val = scaler.transform(X_val)
+```
+
+Uses the same scaling values calculated from training data.
+
+### Transform testing data
+
+```python
+X_test = scaler.transform(X_test_raw)
+```
+
+Applies the same scaler to testing data.
+
+**Important viva point:** We use `fit_transform()` only on training data and `transform()` on validation and testing data to prevent data leakage.
+
+---
+
+## Step 3: Build and Train the Autoencoder
+
+### A. Construct the Autoencoder
+
+```python
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(16, activation="relu"),
+    Dense(8, activation="relu"),
+    Dense(16, activation="relu"),
+    Dense(X_train.shape[1], activation="linear")
+])
+```
+
+This creates the Encoder and Decoder.
+
+Your input has 30 features.
+
+Let's understand every layer.
+
+### 1. Input Layer
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input shape.
+- `X_train.shape[1]` gives the number of input features.
+- Here, the input contains 30 features.
+
+### 2. First Encoder Layer
+
+```python
+Dense(16, activation="relu")
+```
+
+- Contains 16 neurons.
+- Reduces the input dimensions from 30 to 16.
+- ReLU activation introduces non-linearity.
+
+### 3. Second Encoder Layer
+
+```python
+Dense(8, activation="relu")
+```
+
+- Contains 8 neurons.
+- Further compresses the information.
+- This is the low-dimensional latent representation in this architecture.
+
+**Remember:** Encoder = 30 → 16 → 8.
+
+### 4. First Decoder Layer
+
+```python
+Dense(16, activation="relu")
+```
+
+- Contains 16 neurons.
+- Starts reconstructing the compressed information.
+
+### 5. Output Layer
+
+```python
+Dense(X_train.shape[1], activation="linear")
+```
+
+- Contains 30 neurons.
+- Reconstructs the original 30 input features.
+- Linear activation allows the output to take any real numerical value.
+
+**Remember:** Decoder = 8 → 16 → 30.
+
+### Complete architecture
+
+| Layer | Neurons | Purpose |
+|---|---:|---|
+| Input | 30 | Accepts transaction features. |
+| Encoder 1 | 16 | Compresses data. |
+| Encoder 2 | 8 | Creates latent representation. |
+| Decoder 1 | 16 | Reconstructs data. |
+| Output | 30 | Produces reconstructed transaction. |
+
+### B. Compile the model
+
+```python
+model.compile(optimizer="adam", loss="mse")
+```
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce reconstruction error. |
+| `loss="mse"` | Uses Mean Squared Error to measure the difference between original and reconstructed data. |
+
+### What is MSE?
+
+MSE stands for **Mean Squared Error**.
+
+It calculates the average squared difference between original values and reconstructed values.
+
+\[
+MSE = \frac{1}{n}\sum_{i=1}^{n}(X_i-\hat{X}_i)^2
+\]
+
+Where:
+
+- \(X_i\) = Original feature value.
+- \(\hat{X}_i\) = Reconstructed feature value.
+- \(n\) = Number of features.
+
+Lower MSE means better reconstruction.
+
+**Why MSE?**
+
+Because the purpose of an Autoencoder is to reconstruct the original input as accurately as possible.
+
+### C. Train the model
+
+```python
+history = model.fit(
+    X_train, X_train,
+    epochs=10,
+    batch_size=256,
+    validation_data=(X_val, X_val),
+    verbose=0
+)
+```
+
+Let's understand the parameters:
+
+| Parameter | Meaning |
+|---|---|
+| `X_train` | Input normal transactions. |
+| Second `X_train` | Expected output is the same as input. |
+| `epochs=10` | Trains the model for 10 complete passes. |
+| `batch_size=256` | Processes 256 transactions in each batch. |
+| `validation_data` | Evaluates reconstruction on normal validation data. |
+| `verbose=0` | Hides training progress. |
+| `history` | Stores training and validation loss values. |
+
+**Important viva question: Why are both X_train and X_train given?**
+
+Because an Autoencoder tries to reproduce its input.
+
+Therefore:
+
+- Input = Original transaction.
+- Expected output = Same original transaction.
+- Actual output = Reconstructed transaction.
+
+---
+
+## Step 4: Flag Possible Fraud
+
+This is the most important part of anomaly detection.
+
+### A. Calculate validation reconstruction error
+
+```python
+val_reconstruction = model.predict(X_val, verbose=0)
+```
+
+- Sends normal validation transactions into the trained model.
+- The model reconstructs each transaction.
+- Stores reconstructed transactions in `val_reconstruction`.
+
+```python
+val_errors = np.mean(
+    np.square(X_val - val_reconstruction), axis=1
+)
+```
+
+This calculates the reconstruction error for every validation transaction.
+
+Let's understand:
+
+1. `X_val - val_reconstruction` calculates the difference between original and reconstructed values.
+2. `np.square()` squares the differences.
+3. `np.mean()` calculates the average squared difference.
+4. `axis=1` calculates the error separately for each transaction across its 30 features.
+
+### B. Select the threshold
+
+```python
+threshold = np.percentile(val_errors, 95)
+```
+
+This calculates the 95th percentile of normal validation reconstruction errors.
+
+**Your output:**
+
+```text
+Threshold: 1.0703
+```
+
+### What is a threshold?
+
+A threshold is a boundary used to decide whether a transaction is normal or anomalous.
+
+In this practical:
+
+- Error ≤ 1.0703 → Normal.
+- Error > 1.0703 → Potentially fraudulent.
+
+**Why 95th percentile?**
+
+It means the threshold is selected so that approximately 95% of normal validation reconstruction errors fall at or below it.
+
+It is a selected threshold, not a universal value. Changing the percentile can change the number of transactions detected as fraud.
+
+### C. Calculate testing reconstruction
+
+```python
+test_reconstruction = model.predict(X_test, verbose=0)
+```
+
+The trained Autoencoder reconstructs all testing transactions.
+
+```python
+test_errors = np.mean(
+    np.square(X_test - test_reconstruction), axis=1
+)
+```
+
+Calculates the reconstruction error for every test transaction.
+
+### D. Classify transactions
+
+```python
+y_pred = (test_errors > threshold).astype(int)
+```
+
+This line classifies transactions.
+
+- If reconstruction error is greater than the threshold → `1` (Fraud).
+- Otherwise → `0` (Normal).
+- `astype(int)` converts Boolean values into integers.
+
+Example:
+
+| Reconstruction error | Threshold | Prediction |
+|---:|---:|---|
+| 0.45 | 1.0703 | Normal (0) |
+| 0.85 | 1.0703 | Normal (0) |
+| 1.25 | 1.0703 | Fraud (1) |
+| 2.40 | 1.0703 | Fraud (1) |
+
+Remember that the model identifies **potential fraud**, not confirmed fraud.
+
+### E. Display evaluation results
+
+```python
+print("Threshold:", round(float(threshold), 4))
+print("Detected possible fraud:", int(y_pred.sum()))
+```
+
+- Displays the selected threshold.
+- `y_pred.sum()` counts the transactions classified as fraudulent.
+
+Your output:
+
+```text
+Threshold: 1.0703
+Detected possible fraud: 2905
+```
+
+The model detected 2,905 potentially fraudulent transactions.
+
+```python
+print(classification_report(
+    y_test, y_pred,
+    target_names=["Normal", "Fraud"],
+    zero_division=0
+))
+```
+
+Displays the classification evaluation report.
+
+It contains:
+
+| Metric | Meaning |
+|---|---|
+| Precision | Out of all transactions predicted as fraud, how many were actually fraud? |
+| Recall | Out of all actual fraudulent transactions, how many were detected? |
+| F1-score | Harmonic mean of precision and recall. |
+| Support | Actual number of samples in each class. |
+| Accuracy | Overall percentage of correct predictions. |
+
+### Your classification report
+
+```text
+              precision    recall  f1-score   support
+
+Normal           1.00      0.95      0.97     56864
+Fraud            0.03      0.86      0.06        98
+
+accuracy                              0.95     56962
+```
+
+Let's understand the important results.
+
+**Fraud precision = 0.03**
+
+Only about 3% of the transactions flagged as fraud were actually fraudulent.
+
+This means many normal transactions were incorrectly flagged.
+
+**Fraud recall = 0.86**
+
+The model detected approximately 86% of the actual fraudulent transactions.
+
+This is important because fraud detection aims to identify as many fraudulent transactions as possible.
+
+**Accuracy = 0.95**
+
+Overall, approximately 95% of all test transactions were classified correctly.
+
+However, accuracy alone can be misleading because the dataset contains far more normal transactions than fraudulent ones.
+
+### F. Confusion Matrix
+
+```python
+print("Confusion matrix:\n", confusion_matrix(y_test, y_pred))
+```
+
+A confusion matrix compares actual labels with predicted labels.
+
+Your output:
+
+```text
+[[54043  2821]
+ [   14    84]]
+```
+
+### Confusion matrix diagram
+
+| Actual / Predicted | Normal (0) | Fraud (1) |
+|---|---:|---:|
+| Normal (0) | 54043 (TN) | 2821 (FP) |
+| Fraud (1) | 14 (FN) | 84 (TP) |
+
+Understand these four terms:
+
+**1. True Negative (TN) = 54043**
+
+Normal transactions correctly classified as normal.
+
+**2. False Positive (FP) = 2821**
+
+Normal transactions incorrectly classified as fraud.
+
+**3. False Negative (FN) = 14**
+
+Fraudulent transactions incorrectly classified as normal.
+
+**4. True Positive (TP) = 84**
+
+Fraudulent transactions correctly identified as fraud.
+
+Total actual fraudulent transactions:
+
+\[
+14+84=98
+\]
+
+Fraud detection:
+
+\[
+\frac{84}{98}\times100 \approx 85.71\%
+\]
+
+Therefore, the model detects approximately 86% of actual fraud cases.
+
+---
+
+## Step 5: Plot Reconstruction Errors
+
+```python
+plt.figure(figsize=(10, 4))
+```
+
+Creates a graph with width 10 and height 4.
+
+### Plot normal transaction errors
+
+```python
+plt.hist(
+    test_errors[y_test == 0],
+    bins=50,
+    alpha=0.7,
+    label="Normal"
+)
+```
+
+- `test_errors[y_test == 0]` selects reconstruction errors of actual normal transactions.
+- `plt.hist()` creates a histogram.
+- `bins=50` divides the error range into 50 intervals.
+- `alpha=0.7` controls transparency.
+- `label="Normal"` identifies the data in the legend.
+
+### Plot fraudulent transaction errors
+
+```python
+plt.hist(
+    test_errors[y_test == 1],
+    bins=50,
+    alpha=0.7,
+    label="Fraud"
+)
+```
+
+Displays the reconstruction errors of actual fraudulent transactions.
+
+### Display threshold
+
+```python
+plt.axvline(
+    threshold,
+    color="red",
+    linestyle="--",
+    label="Threshold"
+)
+```
+
+- `axvline()` draws a vertical line.
+- `threshold` specifies its position.
+- `color="red"` makes the line red.
+- `linestyle="--"` makes it dashed.
+
+### Add graph labels
+
+```python
+plt.xlabel("Reconstruction error")
+plt.ylabel("Number of transactions")
+plt.legend()
+plt.show()
+```
+
+- `xlabel()` labels the X-axis.
+- `ylabel()` labels the Y-axis.
+- `legend()` displays Normal, Fraud and Threshold labels.
+- `show()` displays the graph.
+
+### How to interpret the graph?
+
+- X-axis → Reconstruction error.
+- Y-axis → Number of transactions.
+- Normal histogram → Errors of actual normal transactions.
+- Fraud histogram → Errors of actual fraudulent transactions.
+- Red dashed line → Selected threshold.
+
+Transactions with errors beyond the threshold are classified as potential fraud.
+
+**Important:** The two distributions can overlap. This explains why some normal transactions are falsely flagged and some fraudulent transactions are missed.
+
+---
+
+# 4. Important Viva Questions and Answers
+
+### Q1. What is an Autoencoder?
+An Autoencoder is an artificial neural network that learns to reconstruct its input data.
+
+### Q2. What are the two main parts of an Autoencoder?
+Encoder and Decoder.
+
+### Q3. What is an Encoder?
+The Encoder compresses the input data into a smaller representation.
+
+### Q4. What is a Decoder?
+The Decoder reconstructs the original input from the compressed representation.
+
+### Q5. What is anomaly detection?
+Anomaly detection is the process of identifying unusual patterns or data points that differ from normal data.
+
+### Q6. What is fraud detection?
+Fraud detection identifies suspicious or potentially fraudulent financial transactions.
+
+### Q7. Why is an Autoencoder used for fraud detection?
+It learns normal transaction patterns and identifies unusual transactions through high reconstruction errors.
+
+### Q8. Why is the Autoencoder trained only on normal transactions?
+So that it learns the patterns of legitimate transactions and produces larger reconstruction errors for unusual transactions.
+
+### Q9. What is reconstruction error?
+It is the difference between the original input and the reconstructed output.
+
+### Q10. What is a threshold?
+A threshold is a boundary used to classify a transaction as normal or anomalous based on its reconstruction error.
+
+### Q11. What is the purpose of the 95th percentile?
+It selects a threshold based on the reconstruction errors of normal validation transactions, with approximately 95% of those errors at or below it.
+
+### Q12. What is the latent representation?
+It is the compressed numerical representation of the input generated by the Encoder.
+
+### Q13. What is the purpose of ReLU?
+ReLU introduces non-linearity and returns zero for negative inputs while keeping positive inputs unchanged.
+
+\[
+ReLU(x)=\max(0,x)
+\]
+
+### Q14. Why is linear activation used in the output layer?
+It allows the model to reconstruct numerical feature values without restricting them to a fixed range.
+
+### Q15. What is MSE?
+MSE stands for Mean Squared Error. It measures the average squared difference between original and reconstructed values.
+
+### Q16. Why is Adam used?
+Adam is an optimizer that updates the network weights to minimize the loss.
+
+### Q17. What is StandardScaler?
+It standardizes numerical features to approximately zero mean and unit variance.
+
+### Q18. Why do we use `fit_transform()` on training data?
+It calculates scaling parameters from training data and applies the transformation.
+
+### Q19. Why do we use `transform()` on testing data?
+To apply the same training-data scaling parameters without calculating new ones from test data.
+
+### Q20. What is an imbalanced dataset?
+A dataset in which one class has significantly more samples than another class.
+
+### Q21. What is precision?
+Precision tells us how many predicted positive cases are actually positive.
+
+### Q22. What is recall?
+Recall tells us how many actual positive cases are correctly identified.
+
+### Q23. What is a False Positive?
+A normal transaction incorrectly classified as fraudulent.
+
+### Q24. What is a False Negative?
+A fraudulent transaction incorrectly classified as normal.
+
+### Q25. What is a True Positive?
+A fraudulent transaction correctly classified as fraudulent.
+
+### Q26. What is a True Negative?
+A normal transaction correctly classified as normal.
+
+### Q27. What does `axis=1` mean in reconstruction error calculation?
+It calculates the mean error across all features separately for each transaction.
+
+### Q28. What does `np.percentile()` do?
+It calculates the value below which a specified percentage of observations falls.
+
+### Q29. What is the purpose of a histogram?
+It visually represents the distribution of reconstruction errors.
+
+### Q30. What is the difference between classification and anomaly detection?
+Classification predicts predefined classes, whereas anomaly detection identifies unusual patterns that differ from normal behaviour.
+
+---
+
+# 5. Important Differences for Viva
+
+### Encoder vs Decoder
+
+| Encoder | Decoder |
+|---|---|
+| Compresses input data. | Reconstructs input data. |
+| Reduces dimensions. | Increases dimensions. |
+| Learns important features. | Uses learned features to recreate input. |
+| 30 → 16 → 8 | 8 → 16 → 30 |
+
+### Normal vs Fraudulent Transactions
+
+| Normal transaction | Fraudulent transaction |
+|---|---|
+| Follows usual transaction patterns. | May contain unusual patterns. |
+| Usually has lower reconstruction error. | May have higher reconstruction error. |
+| Error ≤ threshold → Normal. | Error > threshold → Potential fraud. |
+
+### Precision vs Recall
+
+| Precision | Recall |
+|---|---|
+| Measures correctness of positive predictions. | Measures how many actual positives are detected. |
+| High precision means fewer false positives. | High recall means fewer false negatives. |
+
+---
+
+# 6. Short Explanation to Tell the External Examiner
+
+"The aim of this practical is to detect potentially fraudulent credit-card transactions using an Autoencoder.
+
+First, I imported the required libraries and loaded the credit-card dataset. I separated the transaction features and class labels, where 0 represents normal transactions and 1 represents fraudulent transactions.
+
+Next, I split the data into training and testing sets. I selected only normal transactions for training and standardized the features using StandardScaler.
+
+Then, I created an Autoencoder using Dense layers. The Encoder compresses 30 input features into 8 latent features, and the Decoder reconstructs the original 30 features.
+
+I compiled the model using the Adam optimizer and Mean Squared Error loss function and trained it for 10 epochs.
+
+After training, I calculated reconstruction errors and selected a threshold using the 95th percentile of normal validation errors. Transactions having reconstruction errors above this threshold were classified as potentially fraudulent.
+
+Finally, I displayed the classification report, confusion matrix and reconstruction error histogram. The model detected 84 out of 98 actual fraudulent transactions."
+
+---
+
+# 7. Quick Revision Table
+
+| Step | Operation | Important function |
+|---|---|---|
+| 1 | Load dataset | `pd.read_csv()` |
+| 2 | Separate features and labels | `drop()`, `to_numpy()` |
+| 3 | Split dataset | `train_test_split()` |
+| 4 | Select normal transactions | `y_train_all == 0` |
+| 5 | Normalize features | `StandardScaler()` |
+| 6 | Build Encoder | `Dense(16)`, `Dense(8)` |
+| 7 | Build Decoder | `Dense(16)`, `Dense(30)` |
+| 8 | Compile model | `model.compile()` |
+| 9 | Train model | `model.fit()` |
+| 10 | Reconstruct data | `model.predict()` |
+| 11 | Calculate errors | `np.mean(np.square())` |
+| 12 | Select threshold | `np.percentile()` |
+| 13 | Detect fraud | `test_errors > threshold` |
+| 14 | Evaluate model | `classification_report()` |
+| 15 | Display confusion matrix | `confusion_matrix()` |
+| 16 | Plot errors | `plt.hist()` |
+
+---
+
+# 8. Final Verdict – Is Your Code Correct?
+
+**Yes. Your code correctly implements the required Autoencoder-based fraud detection workflow.** All the major requirements from the question are covered.
+
+| Requirement | Status |
+|---|---|
+| Import required libraries | ✅ |
+| Load credit-card dataset | ✅ |
+| Separate normal and fraudulent transactions | ✅ |
+| Normalize transaction features | ✅ |
+| Use only normal transactions for training | ✅ |
+| Implement Encoder | ✅ |
+| Implement Decoder | ✅ |
+| Compile using Adam and MSE | ✅ |
+| Calculate reconstruction errors | ✅ |
+| Select anomaly threshold | ✅ |
+| Detect potentially fraudulent transactions | ✅ |
+| Display classification report | ✅ |
+| Display confusion matrix | ✅ |
+| Plot reconstruction errors | ✅ |
+
+### Three important observations about your output
+
+1. **Recall = 86%:** The model successfully detects most actual fraudulent transactions.
+2. **Precision = 3%:** Many normal transactions are incorrectly identified as fraud.
+3. **2,905 detected vs 98 actual fraud cases:** This shows that the selected threshold produces many false positives.
+
+This does not mean your code is incorrect. It demonstrates an important challenge in anomaly detection: selecting a threshold that balances fraud detection and false alarms.
+
+**One technical improvement to remember:** Your current 95th-percentile threshold is a reasonable demonstration choice, but it is not necessarily the best threshold for real fraud detection. It can be tuned using a separate validation process to balance precision and recall.
+
+**Most important viva concept:** An Autoencoder learns to reconstruct normal transactions. If a transaction has a high reconstruction error compared with the selected threshold, it is flagged as a potential anomaly or fraud.

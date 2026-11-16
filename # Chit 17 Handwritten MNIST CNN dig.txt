@@ -363,3 +363,706 @@ The CNN correctly classified **98.99% of the test images**.
 
 20. **How is a CNN different from an FNN for image classification?**  
     A CNN uses convolution filters to learn spatial image patterns; an FNN typically flattens the image first and does not explicitly preserve its two-dimensional layout.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 17: Handwritten MNIST CNN – Digit Classification
+
+## 1. Aim
+
+To develop a **Convolutional Neural Network (CNN)** using TensorFlow/Keras to recognize handwritten digits from 0 to 9 using the MNIST dataset.
+
+The model uses:
+- Convolution operation to extract image features.
+- Max-pooling operation to reduce image dimensions.
+- Dense layers to classify handwritten digits.
+- Testing accuracy to evaluate model performance.
+
+---
+
+## 2. Step-by-Step Code Explanation
+
+### Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten
+```
+
+| Library / Function | Explanation |
+|---|---|
+| `numpy` | Performs numerical operations and array handling. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the input shape of the images. |
+| `Dense` | Creates a fully connected neural network layer. |
+| `Conv2D` | Performs convolution operations to extract image features. |
+| `MaxPooling2D` | Reduces the spatial dimensions of feature maps. |
+| `Flatten` | Converts multidimensional feature maps into a one-dimensional array. |
+
+**Important:** `Conv2D`, `MaxPooling2D`, and `Flatten` are the main CNN-related layers in this practical.
+
+---
+
+### Step 2: Load and Prepare Handwritten MNIST
+
+```python
+from tensorflow.keras.datasets import mnist
+
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+```
+
+- `mnist` is a built-in handwritten digit dataset in Keras.
+- `load_data()` loads the dataset and divides it into training and testing data.
+
+**MNIST dataset contains:**
+
+| Property | Description |
+|---|---|
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 pixels |
+| Image type | Grayscale |
+| Number of classes | 10 |
+| Classes | Digits 0–9 |
+
+**Understanding the variables:**
+
+- `X_train`: Training images.
+- `y_train`: Actual labels of training images.
+- `X_test`: Testing images.
+- `y_test`: Actual labels of testing images.
+
+For example, if an image contains digit 7, its actual label is `7`.
+
+**Normalize the images:**
+
+```python
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+```
+
+- `astype("float32")` converts pixel values into floating-point numbers.
+- Dividing by 255 converts pixel values from 0–255 into 0–1.
+
+**Why do we normalize?**
+
+Normalization helps the model learn efficiently and improves the stability of training.
+
+**Define class names:**
+
+```python
+class_names = [str(i) for i in range(10)]
+```
+
+- Creates a list containing digits from 0 to 9.
+- `str(i)` converts each digit into a string.
+
+Result:
+
+```text
+['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+```
+
+**Define image shape:**
+
+```python
+image_shape = (28, 28, 1)
+```
+
+- 28 = Image height.
+- 28 = Image width.
+- 1 = One grayscale channel.
+
+---
+
+### Step 3: Reshape the Images
+
+```python
+X_train = X_train[..., np.newaxis]
+X_test = X_test[..., np.newaxis]
+```
+
+This is a very important step in CNN.
+
+**What does `np.newaxis` do?**
+
+- Adds a new dimension to the existing image data.
+- It adds the channel dimension to each image.
+
+Originally, the image shape is:
+
+```text
+(60000, 28, 28)
+```
+
+After reshaping:
+
+```text
+(60000, 28, 28, 1)
+```
+
+Similarly, testing data changes from:
+
+```text
+(10000, 28, 28)
+```
+
+To:
+
+```text
+(10000, 28, 28, 1)
+```
+
+**What does `...` mean?**
+
+- It represents all existing dimensions.
+- `np.newaxis` adds a new dimension at the end.
+
+**Why is this required?**
+
+CNN's `Conv2D` layer expects input in the format:
+
+```text
+(Number of images, Height, Width, Channels)
+```
+
+For MNIST:
+
+```text
+(60000, 28, 28, 1)
+```
+
+Since MNIST images are grayscale, they have only one channel.
+
+---
+
+### Step 4: Build the CNN Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    Conv2D(32, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Conv2D(64, (3, 3), activation="relu"),
+    MaxPooling2D((2, 2)),
+    Flatten(),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This is the most important part of the practical.
+
+Let's understand each layer.
+
+**1. Number of classes**
+
+```python
+num_classes = len(class_names)
+```
+
+- Calculates the number of output classes.
+- Since there are digits from 0 to 9, `num_classes = 10`.
+
+**2. Sequential model**
+
+```python
+model = Sequential([...])
+```
+
+Creates a CNN in which layers are arranged one after another.
+
+**3. Input layer**
+
+```python
+Input(shape=X_train.shape[1:])
+```
+
+- Defines the input shape of each image.
+- `X_train.shape[1:]` gives `(28, 28, 1)`.
+- Therefore, the model accepts 28 × 28 grayscale images.
+
+**4. First Convolutional Layer**
+
+```python
+Conv2D(32, (3, 3), activation="relu")
+```
+
+- `Conv2D` performs a convolution operation.
+- `32` represents the number of filters.
+- `(3,3)` represents the size of each filter.
+- `activation="relu"` applies the ReLU activation function.
+
+**What is convolution?**
+
+Convolution is an operation in which small filters (kernels) slide over an image to identify important features.
+
+For example, convolution can help identify:
+- Edges.
+- Curves.
+- Lines.
+- Shapes.
+- Patterns in handwritten digits.
+
+**What is a filter?**
+
+A filter is a small matrix that moves over an image to extract specific features.
+
+Here, the first convolutional layer uses 32 filters of size 3 × 3.
+
+**5. First Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Performs max-pooling operation.
+- Uses a 2 × 2 pooling window.
+- Selects the maximum value from each 2 × 2 region.
+- Reduces the spatial dimensions of the feature maps.
+
+**What is Max-Pooling?**
+
+Max-pooling is a downsampling operation that selects the maximum value from a small region of a feature map.
+
+**Why do we use Max-Pooling?**
+
+1. Reduces image feature dimensions.
+2. Reduces computational requirements.
+3. Retains important features.
+4. Helps reduce sensitivity to small changes in image position.
+
+**6. Second Convolutional Layer**
+
+```python
+Conv2D(64, (3, 3), activation="relu")
+```
+
+- Uses 64 filters.
+- Each filter has a size of 3 × 3.
+- Extracts more complex features from the previous feature maps.
+- Uses ReLU activation.
+
+**7. Second Max-Pooling Layer**
+
+```python
+MaxPooling2D((2, 2))
+```
+
+- Again uses a 2 × 2 pooling window.
+- Reduces the feature map dimensions further.
+- Retains the maximum values from each region.
+
+**8. Flatten Layer**
+
+```python
+Flatten()
+```
+
+- Converts the multidimensional feature maps into a one-dimensional array.
+- Makes the data suitable for the Dense layers.
+
+**Why do we use Flatten?**
+
+Convolution and pooling layers produce multidimensional feature maps, whereas Dense layers require one-dimensional input.
+
+**9. Dense Hidden Layer**
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Uses ReLU activation.
+- Learns patterns from the features extracted by convolutional layers.
+
+**10. Output Layer**
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 10 neurons.
+- Each neuron represents one digit from 0 to 9.
+- Softmax produces probabilities for each digit.
+- The digit with the highest probability is selected.
+
+### CNN Architecture Diagram
+
+```text
+          Input Image
+        28 × 28 × 1
+              |
+              ↓
+     Convolutional Layer 1
+       32 Filters (3 × 3)
+         ReLU Activation
+              |
+              ↓
+       Max-Pooling Layer
+           (2 × 2)
+              |
+              ↓
+     Convolutional Layer 2
+       64 Filters (3 × 3)
+         ReLU Activation
+              |
+              ↓
+       Max-Pooling Layer
+           (2 × 2)
+              |
+              ↓
+         Flatten Layer
+              |
+              ↓
+        Dense Layer
+         128 Neurons
+         ReLU Activation
+              |
+              ↓
+        Output Layer
+         10 Neurons
+       Softmax Activation
+              |
+              ↓
+      Predicted Digit (0–9)
+```
+
+### Understanding the Dimensions After Each Layer
+
+This is useful for viva questions.
+
+| Layer | Output shape (excluding batch size) |
+|---|---|
+| Input | 28 × 28 × 1 |
+| Conv2D (32 filters) | 26 × 26 × 32 |
+| MaxPooling2D | 13 × 13 × 32 |
+| Conv2D (64 filters) | 11 × 11 × 64 |
+| MaxPooling2D | 5 × 5 × 64 |
+| Flatten | 1600 |
+| Dense | 128 |
+| Output | 10 |
+
+**How are these dimensions calculated?**
+
+- First convolution: 28 − 3 + 1 = 26.
+- First pooling: 26 ÷ 2 = 13.
+- Second convolution: 13 − 3 + 1 = 11.
+- Second pooling: 11 × 11 becomes 5 × 5 using a 2 × 2 window with the default stride of 2.
+- Flatten: 5 × 5 × 64 = 1600.
+
+Note: The convolution layers use valid padding by default, which means no extra padding is added around the image.
+
+---
+
+### Step 5: Compile and Train
+
+**Compile the model:**
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Measures the difference between actual and predicted classes. |
+| `metrics=["accuracy"]` | Measures the percentage of correct predictions. |
+
+**Why sparse categorical crossentropy?**
+
+Because this is a multiclass classification problem with 10 classes, and the labels are integer values from 0 to 9.
+
+**Train the model:**
+
+```python
+model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=0)
+```
+
+- `model.fit()` trains the CNN.
+- `X_train`: Training images.
+- `y_train`: Actual training labels.
+- `epochs=10`: The model passes through the complete training dataset 10 times.
+- `batch_size=128`: Processes 128 images in one batch before updating weights.
+- `verbose=0`: Hides the training progress.
+
+**Why are epochs used?**
+
+An epoch represents one complete pass through the entire training dataset.
+
+---
+
+### Step 6: Evaluate on Test Data
+
+```python
+_, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Testing accuracy: {test_accuracy * 100:.2f}%")
+```
+
+**Explanation:**
+
+- `model.evaluate()` evaluates the trained CNN using testing data.
+- `X_test` contains testing images.
+- `y_test` contains actual testing labels.
+- It returns test loss and test accuracy.
+- `_` stores the loss value, which is ignored.
+- `test_accuracy` stores the accuracy.
+- Multiplying by 100 converts accuracy into a percentage.
+- `.2f` displays the result up to two decimal places.
+
+---
+
+## 3. Output Explanation
+
+Your output:
+
+```text
+Testing accuracy: 98.99%
+```
+
+**What does 98.99% accuracy mean?**
+
+- The CNN correctly classifies approximately 98.99% of the testing images.
+- The model is evaluated on 10,000 test images.
+- This indicates that the CNN has learned to recognize handwritten digits effectively.
+
+Approximately:
+
+- Correct predictions: 9,899
+- Incorrect predictions: 101
+
+These are approximate counts based on the displayed accuracy.
+
+### Why does CNN generally perform better than FNN for image classification?
+
+| FNN | CNN |
+|---|---|
+| Uses flattened images. | Uses original image dimensions. |
+| Uses Dense layers. | Uses convolution and pooling layers. |
+| Does not directly preserve spatial relationships after flattening. | Preserves and learns spatial features. |
+| Learns patterns through fully connected layers. | Extracts features using filters. |
+| Generally less suitable for image data. | Generally more suitable for image data. |
+
+**Important observation:** Your previous Chit 12 FNN achieved 97.29% accuracy, while this CNN achieved 98.99%. These are the results you provided for the two practicals. They suggest better performance from the CNN in these runs, but they are not a perfectly controlled comparison because the architectures and training settings differ.
+
+---
+
+## 4. Important Viva Questions and Answers
+
+### Q1. What is CNN?
+CNN stands for Convolutional Neural Network. It is a deep learning model mainly used for image processing and image classification.
+
+### Q2. Why do we use CNN for image classification?
+CNN automatically extracts important image features such as edges, shapes and patterns, making it suitable for image classification.
+
+### Q3. What is MNIST?
+MNIST stands for Modified National Institute of Standards and Technology. It is a dataset of handwritten digits from 0 to 9.
+
+### Q4. How many images are present in MNIST?
+It contains 70,000 images:
+- 60,000 training images.
+- 10,000 testing images.
+
+### Q5. What is the size of MNIST images?
+Each image is 28 × 28 pixels.
+
+### Q6. What is convolution?
+Convolution is an operation in which filters slide over an image to extract important features.
+
+### Q7. What is a filter in CNN?
+A filter is a small matrix that moves over an image to detect features such as edges, curves and patterns.
+
+### Q8. What is the size of the filters used in this practical?
+The filter size is 3 × 3 in both convolutional layers.
+
+### Q9. How many filters are used in the first convolutional layer?
+32 filters.
+
+### Q10. How many filters are used in the second convolutional layer?
+64 filters.
+
+### Q11. What is Max-Pooling?
+Max-pooling is a downsampling operation that selects the maximum value from a small region of a feature map.
+
+### Q12. What is the purpose of Max-Pooling?
+It reduces feature map dimensions, reduces computation and retains important features.
+
+### Q13. What is the pooling size used in this practical?
+2 × 2.
+
+### Q14. What is a feature map?
+A feature map is the output produced by applying a filter to an input image or previous feature maps.
+
+### Q15. Why do we use ReLU?
+ReLU introduces non-linearity into the network by converting negative values into zero.
+
+### Q16. Why do we use Flatten?
+Flatten converts multidimensional feature maps into a one-dimensional array before passing them to Dense layers.
+
+### Q17. What is the purpose of the Dense layer?
+Dense layers use the extracted features to perform final classification.
+
+### Q18. Why does the output layer contain 10 neurons?
+Because the MNIST dataset contains 10 digit classes from 0 to 9.
+
+### Q19. What is Softmax?
+Softmax converts output values into probabilities for different classes. The highest probability represents the predicted class.
+
+### Q20. Why do we use `np.newaxis`?
+It adds a channel dimension to the image data so that it matches the input format expected by Conv2D.
+
+### Q21. Why is the channel value 1?
+Because MNIST images are grayscale and contain only one channel.
+
+### Q22. What is the difference between CNN and FNN?
+- FNN uses flattened image data and fully connected layers.
+- CNN uses convolutional and pooling layers to extract spatial features.
+- CNN is generally more effective for image classification.
+
+### Q23. What is Adam optimizer?
+Adam is an optimization algorithm that updates model weights to minimize prediction errors.
+
+### Q24. What is an epoch?
+One complete pass through the entire training dataset is called an epoch.
+
+### Q25. What is batch size?
+The number of training samples processed before updating the model weights is called batch size.
+
+### Q26. What is the loss function used?
+Sparse categorical crossentropy.
+
+### Q27. Why do we normalize images?
+To convert pixel values from 0–255 into 0–1, helping the model train efficiently.
+
+### Q28. What is testing accuracy?
+Testing accuracy is the percentage of correctly classified images from the testing dataset.
+
+### Q29. What is overfitting?
+Overfitting occurs when a model performs very well on training data but poorly on unseen data.
+
+### Q30. What is the main advantage of CNN over FNN?
+CNN automatically extracts spatial features from images and preserves their spatial relationships, making it more suitable for image recognition.
+
+---
+
+## 5. Quick Revision Table
+
+| Concept | Answer |
+|---|---|
+| Dataset | Handwritten MNIST |
+| Total images | 70,000 |
+| Training images | 60,000 |
+| Testing images | 10,000 |
+| Image size | 28 × 28 |
+| Image type | Grayscale |
+| Number of classes | 10 |
+| Input shape | 28 × 28 × 1 |
+| First Conv2D filters | 32 |
+| Second Conv2D filters | 64 |
+| Filter size | 3 × 3 |
+| Pooling size | 2 × 2 |
+| Pooling operation | Max-Pooling |
+| Hidden Dense layer | 128 neurons |
+| Output neurons | 10 |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 10 |
+| Batch size | 128 |
+| Testing accuracy | 98.99% |
+
+---
+
+## 6. Short Explanation to Tell the External Examiner
+
+"I have implemented a Convolutional Neural Network using the handwritten MNIST dataset to recognize digits from 0 to 9.
+
+First, I loaded the MNIST dataset, which contains 60,000 training images and 10,000 testing images. Each image is 28 × 28 pixels. I normalized the pixel values between 0 and 1 and added a channel dimension using `np.newaxis`.
+
+Then, I created a CNN containing two convolutional layers with 32 and 64 filters of size 3 × 3. I used ReLU activation and Max-Pooling layers of size 2 × 2 to extract important features and reduce dimensions.
+
+After that, I used Flatten to convert the feature maps into a one-dimensional array, followed by a Dense layer with 128 neurons and an output layer with 10 neurons using Softmax.
+
+I compiled the model using the Adam optimizer and sparse categorical crossentropy loss function. I trained it for 10 epochs with a batch size of 128.
+
+Finally, I evaluated the model using testing data and achieved **98.99% testing accuracy**."
+
+---
+
+## 7. Final Verdict
+
+**Your code is correct and matches Chit 17.**
+
+- MNIST dataset is loaded correctly.
+- Normalization is correct.
+- Channel dimension is added correctly using `np.newaxis`.
+- Two convolutional layers are implemented correctly.
+- Max-pooling operations are correct.
+- Flatten and Dense layers are correct.
+- Model compilation and training are correct.
+- Testing evaluation is correct.
+
+**Most important viva topics:**
+1. What is CNN?
+2. What is convolution?
+3. What is a filter?
+4. What is Max-Pooling?
+5. Difference between CNN and FNN.
+6. Why do we use `np.newaxis`?
+7. What is a feature map?
+8. Why do we use Flatten?
+9. Why are 32 and 64 filters used?
+10. Explain the CNN architecture and its 98.99% testing accuracy.

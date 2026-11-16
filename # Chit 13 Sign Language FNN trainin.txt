@@ -440,3 +440,850 @@ plt.show()
 
 20. **Why display both training and validation curves?**  
     To compare performance on examples used for learning with examples held aside during training.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Chit 13: Sign Language FNN – Training and Testing Graphs
+
+## 1. Aim of the Practical
+
+To construct a **Feedforward Neural Network (FNN)** using TensorFlow/Keras to recognize different American Sign Language (ASL) alphabet hand gestures using the Sign Language MNIST dataset.
+
+The model performs the following tasks:
+
+1. Loads the Sign Language MNIST dataset.
+2. Normalizes pixel values between 0 and 1.
+3. Encodes alphabet labels into numerical values.
+4. Flattens images into one-dimensional arrays.
+5. Builds and trains an FNN using Dense layers.
+6. Displays training accuracy, testing accuracy and loss graphs.
+
+---
+
+# 2. Explanation of Code Step-by-Step
+
+## Step 1: Import the Libraries
+
+```python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, Dense
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+```
+
+| Code | Explanation |
+|---|---|
+| `numpy` | Used for numerical operations and array handling. |
+| `tensorflow` | Used to build and train deep learning models. |
+| `Sequential` | Creates a neural network with layers arranged one after another. |
+| `Input` | Defines the input shape of the model. |
+| `Dense` | Creates fully connected neural network layers. |
+| `pandas` | Used to read and process CSV files. |
+| `LabelEncoder` | Converts alphabet labels into numerical values. |
+| `matplotlib.pyplot` | Used to plot accuracy and loss graphs. |
+
+**What is Label Encoding?**
+
+Label encoding converts categorical labels into numerical values so that the machine learning model can process them.
+
+For example:
+
+```text
+A → 0
+B → 1
+C → 2
+D → 3
+```
+
+---
+
+## Step 2: Load and Prepare Sign Language MNIST
+
+### A. Load the Dataset
+
+```python
+train_df = pd.read_csv("sign_mnist_train.csv")
+test_df = pd.read_csv("sign_mnist_test.csv")
+```
+
+**What is Sign Language MNIST?**
+
+Sign Language MNIST is a dataset containing grayscale images of American Sign Language (ASL) hand gestures representing alphabets.
+
+It contains:
+- Training images.
+- Testing images.
+- Each image is 28 × 28 pixels.
+- 24 alphabet classes.
+
+**Why are there 24 classes instead of 26?**
+
+The letters **J and Z** are excluded because they require hand movement to represent them, and the dataset contains static images.
+
+**Explanation:**
+
+- `pd.read_csv()` reads a CSV file.
+- `train_df` stores the training dataset.
+- `test_df` stores the testing dataset.
+
+### B. Separate Images and Labels and Normalize
+
+```python
+X_train = train_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+X_test = test_df.drop(columns="label").to_numpy(dtype="float32") / 255.0
+```
+
+Let's understand this statement.
+
+**1. `drop(columns="label")`**
+
+Removes the label column from the dataset.
+
+Why?
+
+Because we need to separate:
+- Input data (images).
+- Output data (actual alphabet labels).
+
+**2. `to_numpy(dtype="float32")`**
+
+- Converts the image data into NumPy arrays.
+- `float32` represents numbers using 32-bit floating-point precision.
+
+**3. `/255.0`**
+
+Normalizes pixel values.
+
+Original pixel values range from 0 to 255.
+
+After normalization, values range from 0 to 1.
+
+**Why is normalization required?**
+
+- Helps the model learn faster.
+- Improves training stability.
+- Makes input values easier for the neural network to process.
+
+### C. Encode the Alphabet Labels
+
+```python
+encoder = LabelEncoder()
+```
+
+Creates a LabelEncoder object.
+
+```python
+y_train = encoder.fit_transform(train_df["label"])
+```
+
+- `fit_transform()` learns the unique labels and converts them into numerical values.
+- `y_train` stores encoded training labels.
+
+```python
+y_test = encoder.transform(test_df["label"])
+```
+
+- Converts testing labels into numerical values.
+- Uses the same encoding learned from training data.
+
+**Important difference:**
+
+| Function | Meaning |
+|---|---|
+| `fit()` | Learns the unique categories. |
+| `transform()` | Converts categories into numbers. |
+| `fit_transform()` | Learns categories and converts them together. |
+
+We use `transform()` for testing data so that the same class mapping is maintained.
+
+### D. Convert Numerical Labels into Alphabet Names
+
+```python
+class_names = [chr(int(label) + 65) for label in encoder.classes_]
+```
+
+This statement converts numerical alphabet labels into their corresponding English letters.
+
+- `encoder.classes_`: Contains the unique original labels.
+- `int(label)`: Converts the label into an integer.
+- `+65`: Converts the label into its ASCII code.
+- `chr()`: Converts the ASCII code into a character.
+
+Example:
+
+| Label | ASCII Value | Alphabet |
+|---|---:|---|
+| 0 | 65 | A |
+| 1 | 66 | B |
+| 2 | 67 | C |
+| 3 | 68 | D |
+
+**Note:** In this dataset, the original label values follow the ASL alphabet encoding, with J and Z absent. LabelEncoder sorts the available labels and assigns encoded indices.
+
+```python
+image_shape = (28, 28, 1)
+```
+
+Defines the image dimensions:
+
+- 28 = Height.
+- 28 = Width.
+- 1 = One grayscale channel.
+
+---
+
+## Step 3: Flatten the Images
+
+```python
+X_train = X_train.reshape(-1, 28, 28).reshape(-1, 784)
+X_test = X_test.reshape(-1, 28, 28).reshape(-1, 784)
+```
+
+**What is Flattening?**
+
+Flattening converts a two-dimensional image into a one-dimensional array.
+
+Each image contains:
+
+28 × 28 = 784 pixels.
+
+Therefore, each image is converted into an array of 784 values.
+
+Let's understand the code:
+
+**First reshape:**
+
+```python
+.reshape(-1, 28, 28)
+```
+
+Reshapes the images into 28 × 28 dimensions.
+
+**Second reshape:**
+
+```python
+.reshape(-1, 784)
+```
+
+Converts each image into a one-dimensional array of 784 values.
+
+**What does `-1` mean?**
+
+It automatically calculates the number of images based on the remaining dimensions.
+
+**Why is flattening required?**
+
+An FNN with Dense layers expects one-dimensional input, so images must be flattened before passing them to the model.
+
+---
+
+## Step 4: Build the Model
+
+```python
+num_classes = len(class_names)
+
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(256, activation="relu"),
+    Dense(128, activation="relu"),
+    Dense(num_classes, activation="softmax")
+])
+```
+
+This step creates the Feedforward Neural Network.
+
+### A. Number of Classes
+
+```python
+num_classes = len(class_names)
+```
+
+Counts the number of alphabet categories.
+
+Here, the number of classes is **24**.
+
+### B. Sequential Model
+
+```python
+model = Sequential([
+```
+
+Creates a neural network in which layers are arranged one after another.
+
+### C. Input Layer
+
+```python
+Input(shape=(X_train.shape[1],))
+```
+
+- Defines the input size.
+- `X_train.shape[1]` represents 784 input features.
+- Each image contains 784 pixel values.
+
+### D. First Hidden Layer
+
+```python
+Dense(256, activation="relu")
+```
+
+- Contains 256 neurons.
+- Uses ReLU activation.
+- Learns basic patterns from hand gesture images.
+
+### E. Second Hidden Layer
+
+```python
+Dense(128, activation="relu")
+```
+
+- Contains 128 neurons.
+- Learns more complex patterns from the input.
+
+### F. Output Layer
+
+```python
+Dense(num_classes, activation="softmax")
+```
+
+- Contains 24 neurons.
+- Each neuron represents one ASL alphabet class.
+- Softmax produces probability scores for all 24 classes.
+- The alphabet with the highest probability is selected as the prediction.
+
+### FNN Architecture Diagram
+
+```text
+       ASL Hand Gesture
+          28 × 28
+             |
+             v
+       Flatten Layer
+         784 Pixels
+             |
+             v
+      Hidden Layer 1
+        256 Neurons
+           ReLU
+             |
+             v
+      Hidden Layer 2
+        128 Neurons
+           ReLU
+             |
+             v
+       Output Layer
+        24 Neurons
+          Softmax
+             |
+             v
+      Predicted Alphabet
+          A to Z
+       (Except J and Z)
+```
+
+---
+
+## Step 5: Compile the Model
+
+```python
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=["accuracy"]
+)
+```
+
+Compilation configures the model for training.
+
+| Parameter | Explanation |
+|---|---|
+| `optimizer="adam"` | Updates model weights to reduce prediction errors. |
+| `loss="sparse_categorical_crossentropy"` | Calculates prediction error for multi-class classification with integer labels. |
+| `metrics=["accuracy"]` | Measures the percentage of correctly classified images. |
+
+**What is Adam Optimizer?**
+
+Adam is an optimization algorithm that updates model weights and biases to minimize the loss.
+
+**What is Sparse Categorical Crossentropy?**
+
+It is a loss function used for multi-class classification when actual labels are represented as integers.
+
+**What is Accuracy?**
+
+Accuracy measures the percentage of correct predictions.
+
+---
+
+## Step 6: Train the Model
+
+```python
+history = model.fit(
+    X_train, y_train,
+    epochs=15,
+    batch_size=128,
+    validation_split=0.1,
+    verbose=0
+)
+```
+
+This step trains the neural network using training images and their actual alphabet labels.
+
+Let's understand each parameter:
+
+| Parameter | Explanation |
+|---|---|
+| `X_train` | Training images. |
+| `y_train` | Actual alphabet labels. |
+| `epochs=15` | Model processes the complete training dataset 15 times. |
+| `batch_size=128` | Processes 128 images before updating weights. |
+| `validation_split=0.1` | Uses 10% of training data for validation. |
+| `verbose=0` | Hides training progress output. |
+| `history` | Stores training and validation accuracy and loss for every epoch. |
+
+### What is Validation Split?
+
+Validation split divides a portion of training data for checking model performance during training.
+
+Here:
+
+- 90% of training data is used for actual training.
+- 10% of training data is used for validation.
+
+**Why is validation data required?**
+
+It helps us understand how well the model performs on data that is not directly used to update its weights.
+
+### What is History?
+
+`history` stores the performance values recorded during every training epoch.
+
+For example:
+
+```python
+history.history["accuracy"]
+```
+
+Stores training accuracy for all 15 epochs.
+
+```python
+history.history["val_accuracy"]
+```
+
+Stores validation accuracy for all 15 epochs.
+
+```python
+history.history["loss"]
+```
+
+Stores training loss for all 15 epochs.
+
+```python
+history.history["val_loss"]
+```
+
+Stores validation loss for all 15 epochs.
+
+---
+
+## Step 7: Evaluate on Test Data
+
+```python
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+```
+
+This evaluates the trained model using testing data.
+
+- `model.evaluate()`: Evaluates model performance.
+- `X_test`: Testing images.
+- `y_test`: Actual testing labels.
+- `test_loss`: Stores testing loss.
+- `test_accuracy`: Stores testing accuracy.
+- `verbose=0`: Hides evaluation progress.
+
+### Get Training Accuracy
+
+```python
+train_accuracy = history.history["accuracy"][-1]
+```
+
+- `history.history["accuracy"]`: Contains training accuracy for all epochs.
+- `[-1]`: Selects the last value.
+- Stores the training accuracy of the 15th epoch.
+
+### Display Results
+
+```python
+print(f"Training accuracy: {train_accuracy * 100:.2f}%")
+print(f"Testing accuracy:  {test_accuracy * 100:.2f}%")
+print("Testing Loss:", test_loss)
+```
+
+These statements display:
+
+1. Training accuracy in percentage.
+2. Testing accuracy in percentage.
+3. Testing loss.
+
+**Important difference:**
+
+| Training Accuracy | Testing Accuracy |
+|---|---|
+| Measures performance on training data. | Measures performance on unseen testing data. |
+| Obtained from `history`. | Obtained from `model.evaluate()`. |
+| Shows how well the model learned. | Shows how well the model generalizes. |
+
+---
+
+## Step 8: Plot Accuracy and Loss Graphs
+
+```python
+plt.figure(figsize=(12, 4))
+```
+
+Creates a figure of width 12 and height 4.
+
+The practical displays two graphs side by side.
+
+### A. Accuracy Graph
+
+```python
+plt.subplot(1, 2, 1)
+```
+
+Divides the figure into one row and two columns.
+
+`1` = Number of rows.
+
+`2` = Number of columns.
+
+The last `1` specifies the position of the first graph.
+
+```python
+plt.plot(history.history["accuracy"], label="Training")
+```
+
+Plots training accuracy over 15 epochs.
+
+```python
+plt.plot(history.history["val_accuracy"], label="Validation")
+```
+
+Plots validation accuracy over 15 epochs.
+
+```python
+plt.title("Accuracy")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.legend()
+```
+
+- `title()`: Sets the graph title.
+- `xlabel()`: Labels the X-axis as Epoch.
+- `ylabel()`: Labels the Y-axis as Accuracy.
+- `legend()`: Displays labels for training and validation lines.
+
+**What does the accuracy graph show?**
+
+It shows how training and validation accuracy change during model training.
+
+Generally:
+- Accuracy increases as the model learns.
+- Higher accuracy indicates better classification performance.
+- A large difference between training and validation accuracy may indicate overfitting.
+
+### B. Loss Graph
+
+```python
+plt.subplot(1, 2, 2)
+```
+
+Selects the second graph position.
+
+```python
+plt.plot(history.history["loss"], label="Training")
+```
+
+Plots training loss over 15 epochs.
+
+```python
+plt.plot(history.history["val_loss"], label="Validation")
+```
+
+Plots validation loss over 15 epochs.
+
+```python
+plt.title("Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend()
+```
+
+Adds the title, axis labels and legend.
+
+**What does the loss graph show?**
+
+It shows how prediction error changes during training.
+
+Generally:
+- Loss decreases as the model learns.
+- Lower loss indicates fewer prediction errors.
+- If validation loss starts increasing while training loss decreases, it may indicate overfitting.
+
+### C. Display the Graphs
+
+```python
+plt.tight_layout()
+plt.show()
+```
+
+- `tight_layout()`: Adjusts spacing between graphs.
+- `show()`: Displays both graphs.
+
+---
+
+# 3. Understanding the Graphs
+
+Your practical produces two graphs:
+
+### Graph 1: Accuracy
+
+| Line | Meaning |
+|---|---|
+| Training | Accuracy on training data. |
+| Validation | Accuracy on validation data. |
+
+**Expected observation:** Both accuracy curves generally increase as the number of epochs increases.
+
+### Graph 2: Loss
+
+| Line | Meaning |
+|---|---|
+| Training | Error on training data. |
+| Validation | Error on validation data. |
+
+**Expected observation:** Both loss curves generally decrease as the model learns.
+
+**Remember:**
+
+- Accuracy should generally increase.
+- Loss should generally decrease.
+- High training accuracy with much lower validation accuracy can indicate overfitting.
+
+---
+
+# 4. Important External Viva Questions and Answers
+
+### Q1. What is Sign Language MNIST?
+It is a dataset containing grayscale images of American Sign Language hand gestures representing alphabets.
+
+### Q2. What is ASL?
+ASL stands for American Sign Language. It is a visual language that uses hand gestures to communicate.
+
+### Q3. How many classes are present in Sign Language MNIST?
+There are 24 classes because J and Z are excluded.
+
+### Q4. Why are J and Z excluded?
+Because these gestures require hand movement, whereas the dataset contains static images.
+
+### Q5. What is the size of each image?
+28 × 28 pixels.
+
+### Q6. What is an FNN?
+FNN stands for Feedforward Neural Network. Information flows from the input layer through hidden layers to the output layer in one direction.
+
+### Q7. What is LabelEncoder?
+LabelEncoder converts categorical labels into numerical values.
+
+### Q8. Why do we use LabelEncoder?
+Because neural networks require numerical labels instead of alphabet characters or other categorical values.
+
+### Q9. What is the purpose of `fit_transform()`?
+It learns unique categories and converts them into numerical values.
+
+### Q10. What is the purpose of `transform()`?
+It converts categories into numerical values using the previously learned mapping.
+
+### Q11. What is normalization?
+Normalization converts pixel values from 0–255 into 0–1.
+
+### Q12. Why is flattening required?
+It converts a 28 × 28 image into a one-dimensional array containing 784 values.
+
+### Q13. How many neurons are present in the first hidden layer?
+256 neurons.
+
+### Q14. How many neurons are present in the second hidden layer?
+128 neurons.
+
+### Q15. How many neurons are present in the output layer?
+24 neurons because there are 24 alphabet classes.
+
+### Q16. What is ReLU?
+ReLU stands for Rectified Linear Unit. It converts negative values into zero and keeps positive values unchanged.
+
+### Q17. What is Softmax?
+Softmax converts output values into probabilities for different classes.
+
+### Q18. What is an Epoch?
+One complete pass through the entire training dataset.
+
+### Q19. What is Batch Size?
+The number of training samples processed together before updating model weights.
+
+### Q20. What is Validation Split?
+It is the percentage of training data reserved for validation during training.
+
+### Q21. What is the purpose of `validation_split=0.1`?
+It reserves 10% of the training data for validation and uses the remaining 90% for training.
+
+### Q22. What is the purpose of `history`?
+It stores training and validation accuracy and loss values for every epoch.
+
+### Q23. What is Training Accuracy?
+It measures how many training images are correctly classified by the model.
+
+### Q24. What is Testing Accuracy?
+It measures how many unseen testing images are correctly classified by the trained model.
+
+### Q25. What is Loss?
+Loss measures the difference between actual and predicted outputs.
+
+### Q26. What is the difference between Accuracy and Loss?
+
+| Accuracy | Loss |
+|---|---|
+| Measures correct predictions. | Measures prediction error. |
+| Higher is generally better. | Lower is generally better. |
+| Expressed as a percentage or fraction. | Expressed as a numerical value. |
+
+### Q27. What is Overfitting?
+Overfitting occurs when a model performs very well on training data but poorly on unseen data.
+
+### Q28. Why do we use Matplotlib?
+Matplotlib is used to visualize training and validation accuracy and loss graphs.
+
+### Q29. What is the purpose of `model.evaluate()`?
+It evaluates the trained model on testing data and returns loss and accuracy.
+
+### Q30. What is the difference between Training and Validation Data?
+- Training data is used to update model weights.
+- Validation data is used to monitor model performance during training.
+
+---
+
+# 5. Important Differences for Viva
+
+### Training vs Validation vs Testing
+
+| Training Data | Validation Data | Testing Data |
+|---|---|---|
+| Used to train the model. | Used to monitor model performance during training. | Used to evaluate final model performance. |
+| Updates weights. | Does not directly update weights. | Does not update weights. |
+| 90% of training data in this practical. | 10% of training data in this practical. | Separate testing dataset. |
+
+### Accuracy Graph vs Loss Graph
+
+| Accuracy Graph | Loss Graph |
+|---|---|
+| Shows model correctness. | Shows model prediction error. |
+| Generally increases. | Generally decreases. |
+| Higher is better. | Lower is better. |
+
+---
+
+# 6. Quick Revision Before Viva
+
+| Topic | Answer |
+|---|---|
+| Practical | ASL alphabet recognition |
+| Model | FNN |
+| Dataset | Sign Language MNIST |
+| Image size | 28 × 28 |
+| Training data | CSV file |
+| Number of classes | 24 |
+| Excluded alphabets | J and Z |
+| Input features | 784 |
+| Normalization | Divide by 255 |
+| Label encoding | LabelEncoder |
+| Hidden layers | 2 |
+| First hidden layer | 256 neurons |
+| Second hidden layer | 128 neurons |
+| Output layer | 24 neurons |
+| Hidden activation | ReLU |
+| Output activation | Softmax |
+| Optimizer | Adam |
+| Loss function | Sparse categorical crossentropy |
+| Epochs | 15 |
+| Batch size | 128 |
+| Validation split | 0.1 (10%) |
+| Training accuracy | `history.history["accuracy"][-1]` |
+| Testing accuracy | `model.evaluate()` |
+| Training loss | `history.history["loss"]` |
+| Validation loss | `history.history["val_loss"]` |
+| Graph library | Matplotlib |
+
+---
+
+# 7. Explain This Practical to the External Examiner
+
+Memorize this short explanation:
+
+"This practical implements a Feedforward Neural Network to recognize American Sign Language alphabets using the Sign Language MNIST dataset. First, we load the training and testing CSV files. We separate the image pixels and labels, normalize pixel values between 0 and 1, and encode the alphabet labels using LabelEncoder. Each image is flattened into 784 values. Then we build an FNN using two hidden Dense layers containing 256 and 128 neurons with ReLU activation. The output layer contains 24 neurons with Softmax activation because the dataset contains 24 alphabet classes. We compile the model using the Adam optimizer and sparse categorical crossentropy loss. We train it for 15 epochs with a batch size of 128 and keep 10% data for validation. Finally, we evaluate training and testing accuracy and plot training and validation accuracy and loss graphs using Matplotlib."
+
+---
+
+## 8. Final Code Verdict
+
+**Your Chit 13 code is correct and covers all the requirements.**
+
+It includes:
+- Sign Language MNIST dataset.
+- Pixel normalization.
+- Label encoding.
+- Image flattening.
+- FNN with Dense layers.
+- Model training for 15 epochs.
+- Training accuracy.
+- Testing accuracy and testing loss.
+- Accuracy and loss graphs.
+
+**One important viva point:** Your code displays the final training accuracy from the 15th epoch, while testing accuracy is calculated separately using the test dataset. These two values are not necessarily equal.
